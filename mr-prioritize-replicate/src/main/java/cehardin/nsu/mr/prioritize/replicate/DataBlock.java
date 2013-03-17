@@ -4,21 +4,25 @@
  */
 package cehardin.nsu.mr.prioritize.replicate;
 
-import java.util.Collection;
-import java.util.Set;
-
 /**
  *
  * @author Chad
  */
 public class DataBlock {
-	private int size;
+	private final String id;
+	private final int size;
 
+	public DataBlock(String id, int size) {
+		this.id = id;
+		this.size = size;
+	}
+
+	public String getId() {
+		return id;
+	}
+	
 	public int getSize() {
 		return size;
 	}
 
-	public void setSize(int size) {
-		this.size = size;
-	}
 }

@@ -4,7 +4,13 @@
  */
 package cehardin.nsu.mr.prioritize.replicate;
 
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -18,23 +24,20 @@ import java.util.Set;
  */
 public class Cluster {
 
-	private Set<Rack> racks;
-	private Resource networkResource;
+	private final Set<Rack> racks;
+	private final Resource networkResource;
 
+	public Cluster(Set<Rack> racks, Resource networkResource) {
+		this.racks = racks;
+		this.networkResource = networkResource;
+	}
+	
 	public Set<Rack> getRacks() {
 		return racks;
 	}
 
-	public void setRacks(Set<Rack> racks) {
-		this.racks = racks;
-	}
-
 	public Resource getNetworkResource() {
 		return networkResource;
-	}
-
-	public void setNetworkResource(Resource networkResource) {
-		this.networkResource = networkResource;
 	}
 
 	public Set<DataBlock> getDataBlocks() {
@@ -46,26 +49,36 @@ public class Cluster {
 
 		return dataBlocks;
 	}
-
-	public Map<DataBlock, Integer> getDataBlockReplicationCount() {
-		final Map<DataBlock, Integer> dataBlockReplicationCount = new HashMap<DataBlock, Integer>();
-
-		for (final Rack rack : getRacks()) {
-			for (final Map.Entry<DataBlock, Integer> dataBlockCountEntry : rack.getDataBlockReplicationCount().entrySet()) {
-				final DataBlock dataBlock = dataBlockCountEntry.getKey();
-				final int countToAdd = dataBlockCountEntry.getValue();
-
-				if (dataBlockReplicationCount.containsKey(dataBlock)) {
-					final int count = dataBlockReplicationCount.get(dataBlock);
-					final int newCount = count + countToAdd;
-					dataBlockReplicationCount.put(dataBlock, newCount);
-				} else {
-					dataBlockReplicationCount.put(dataBlock, countToAdd);
+	
+	public Map<String, Set<DataBlock>> getDataBlocksById() {
+		final Map<String, Set<DataBlock>> blocksById = Maps.newHashMap();
+		
+		for(final Rack rack : getRacks()) {
+			for(final Map.Entry<String, Set<DataBlock>> nodeBlocksById : rack.getDataBlocksById().entrySet()) {
+				final String id = nodeBlocksById.getKey();
+				final Set<DataBlock> dataBlocks = nodeBlocksById.getValue();
+				
+				if(blocksById.containsKey(id)) {
+					blocksById.get(id).addAll(dataBlocks);
+				}
+				else {
+					blocksById.put(id, dataBlocks);
 				}
 			}
 		}
+		
+		return Collections.unmodifiableMap(blocksById);
+	}
 
-		return dataBlockReplicationCount;
+	public Map<String, Integer> getDataBlockReplicationCount() {
+		return Collections.unmodifiableMap(
+			Maps.transformValues(getDataBlocksById(), new Function<Set<DataBlock>, Integer>() {
+
+			public Integer apply(Set<DataBlock> dataBlocks) {
+				return dataBlocks.size();
+			}
+			
+		}));
 	}
 
 	public Rack pickRandomRack() {
@@ -89,38 +102,34 @@ public class Cluster {
 		return randomRack;
 	}
 
-	public Rack findRackOfNode(Node node) {
-		Rack found = null;
+	public Rack findRackOfNode(final Node node) {
+		return Iterables.find(getRacks(), new Predicate<Rack>() {
 
-		for (final Rack rack : racks) {
-			if (rack.getNodes().contains(node)) {
-				found = rack;
-				break;
+			public boolean apply(Rack rack) {
+				return rack.getNodes().contains(node);
 			}
-		}
-
-		return found;
+		
+		});
 	}
 
-	public Set<Node> findNodesOfDataBlock(DataBlock dataBlock) {
-		Set<Node> found = new HashSet<Node>();
+	public Set<Node> findNodesOfDataBlock(String dataBlockId) {
+		final Set<Node> found = new HashSet<Node>();
 
 		for (final Rack rack : racks) {
-			found.addAll(rack.findNodesOfDataBlock(dataBlock));
+			found.addAll(rack.findNodesOfDataBlockId(dataBlockId));
 		}
 
-		return found;
+		return Collections.unmodifiableSet(found);
 	}
 
-	public Set<Rack> findRacksOfDataBlock(DataBlock dataBlock) {
-		Set<Rack> found = new HashSet<Rack>();
+	public Set<Rack> findRacksOfDataBlock(final String dataBlockId) {
+		return Collections.unmodifiableSet(
+			Sets.filter(getRacks(), new Predicate<Rack>() {
 
-		for (final Rack rack : racks) {
-			if(!rack.findNodesOfDataBlock(dataBlock).isEmpty()) {
-				found.add(rack);
+			public boolean apply(Rack rack) {
+				return !rack.findNodesOfDataBlockId(dataBlockId).isEmpty();
 			}
-		}
-
-		return found;
+			
+		}));
 	}
 }

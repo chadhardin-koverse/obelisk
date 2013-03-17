@@ -4,68 +4,87 @@
  */
 package cehardin.nsu.mr.prioritize.replicate;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  *
  * @author Chad
  */
-public class Resource {
-	private final ScheduledExecutorService executorService;
-	private final double capacityPerSecond;
-	private volatile boolean busy = false;
+public class Resource implements Simulated {
+	private final double capacityInMs;
 	private final Queue<Reservation> reservations = new LinkedList<Reservation>();
 	
-	public Resource(ScheduledExecutorService executorService, double capacityPerSecond) {
-		this.executorService = executorService;
-		this.capacityPerSecond = capacityPerSecond;
+	public Resource(final double capacityInMs) {
+		this.capacityInMs = capacityInMs;
 	}
-	
-	public synchronized void consume(final double amount, final Runnable callback) {
-		reservations.offer(new Reservation(amount, callback));
-		schedule();
-	}
-	
-	private synchronized void schedule() {
-		if(!busy) {
-			final Reservation reservation = reservations.poll();
-			
-			if(reservation != null) {
-				final double delay = 1000.0 * reservation.getAmount() / capacityPerSecond;
-				
-				busy = true;
-				executorService.schedule(new Runnable() {
 
-					public void run() {
-						synchronized(Resource.this) {
-							busy = false;
-							executorService.execute(reservation.getCallback());
-							schedule();	
-						}
-					}
-				}, (long)delay, TimeUnit.MILLISECONDS);
+	public double execute(final double timeInMs) {
+		final Iterator<Reservation> reservationIterator = reservations.iterator();
+		double timeUsed = 0;
+		
+		while(reservationIterator.hasNext()) {
+			if(timeUsed >= timeInMs) {
+				break;
+			}
+			final double timeAvailable = timeInMs - timeUsed;
+			final double capacityAvailable = capacityInMs * timeAvailable;
+			final Reservation reservation = reservationIterator.next();
+			final double capacityUsed = reservation.use(capacityAvailable);
+			
+			timeUsed += (capacityUsed / capacityInMs);
+			
+			if(reservation.isDone()) {
+				reservation.getCallback().run();
+				reservationIterator.remove();
 			}
 		}
+		
+		return timeUsed;
+	}
+	
+	public void consume(final double amount, final Runnable callback) {
+		reservations.add(new Reservation(callback, amount));
 	}
 	
 	private static class Reservation {
-		private final double amount;
 		private final Runnable callback;
+		private final double needed;
+		private double used;
 
-		public Reservation(double amount, Runnable callback) {
-			this.amount = amount;
+		public Reservation(final Runnable callback, final double needed) {
 			this.callback = callback;
-		}
-
-		public double getAmount() {
-			return amount;
+			this.needed = needed;
+			this.used = 0;
 		}
 
 		public Runnable getCallback() {
 			return callback;
+		}
+
+		public double getNeeded() {
+			return needed;
+		}
+
+		public double getUsed() {
+			return used;
+		}
+		
+		public double getLeft() {
+			return getNeeded()- getUsed();
+		}
+		
+		public boolean isDone() {
+			return getLeft() <= 0;
+		}
+		
+		public double use(final double available) {
+			final double taken = available <= getLeft() ? available : getLeft();
+			
+			used += taken;
+			
+			return taken;
 		}
 	}
 }

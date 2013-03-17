@@ -4,7 +4,13 @@
  */
 package cehardin.nsu.mr.prioritize.replicate;
 
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -16,25 +22,24 @@ import java.util.Set;
  *
  * @author Chad
  */
-public class Rack {
-	private Cluster cluster;
-	private Set<Node> nodes;
-	private Resource networkResource;
+public class Rack extends AbstractHardware {
+	private final Set<Node> nodes;
+	private final Resource networkResource;
 
+	public Rack(Set<Node> nodes, Resource networkResource, String name) {
+		super(name);
+		this.nodes = nodes;
+		this.networkResource = networkResource;
+	}
+
+	
+	
 	public Set<Node> getNodes() {
 		return nodes;
 	}
 
-	public void setNodes(Set<Node> nodes) {
-		this.nodes = nodes;
-	}
-
 	public Resource getNetworkResource() {
 		return networkResource;
-	}
-
-	public void setNetworkResource(Resource networkResource) {
-		this.networkResource = networkResource;
 	}
 	
 	public Set<DataBlock> getDataBlocks() {
@@ -47,23 +52,35 @@ public class Rack {
 		return dataBlocks;
 	}
 	
-	public Map<DataBlock, Integer> getDataBlockReplicationCount() {
-		final Map<DataBlock, Integer> dataBlockReplicationCount = new HashMap<DataBlock, Integer>();
+	public Map<String, Set<DataBlock>> getDataBlocksById() {
+		final Map<String, Set<DataBlock>> blocksById = Maps.newHashMap();
 		
 		for(final Node node : getNodes()) {
-			for(final DataBlock dataBlock : node.getDataBlocks()) {
-				if(dataBlockReplicationCount.containsKey(dataBlock)) {
-					final int count = dataBlockReplicationCount.get(dataBlock);
-					final int newCount = count + 1;
-					dataBlockReplicationCount.put(dataBlock, newCount);
+			for(final Map.Entry<String, Set<DataBlock>> nodeBlocksById : node.getDataBlocksById().entrySet()) {
+				final String id = nodeBlocksById.getKey();
+				final Set<DataBlock> dataBlocks = nodeBlocksById.getValue();
+				
+				if(blocksById.containsKey(id)) {
+					blocksById.get(id).addAll(dataBlocks);
 				}
 				else {
-					dataBlockReplicationCount.put(dataBlock, 1);
+					blocksById.put(id, dataBlocks);
 				}
 			}
 		}
 		
-		return dataBlockReplicationCount;
+		return Collections.unmodifiableMap(blocksById);
+	}
+	
+	public Map<String, Integer> getDataBlockReplicationCount() {
+		return Collections.unmodifiableMap(
+			Maps.transformValues(getDataBlocksById(), new Function<Set<DataBlock>, Integer>() {
+
+			public Integer apply(Set<DataBlock> dataBlocks) {
+				return dataBlocks.size();
+			}
+			
+		}));
 	}
 	
 	public Node pickRandomNode() {
@@ -88,15 +105,13 @@ public class Rack {
 			
 	}
 	
-	public Set<Node> findNodesOfDataBlock(DataBlock dataBlock) {
-		Set<Node> found = new HashSet<Node>();
-		
-		for(final Node node : nodes) {
-			if(node.getDataBlocks().contains(dataBlock)) {
-				found.add(node);
+	public Set<Node> findNodesOfDataBlockId(final String dataBlockId) {
+		return Collections.unmodifiableSet(
+			Sets.filter(getNodes(), new Predicate<Node>() {
+
+			public boolean apply(final Node node) {
+				return node.getDataBlocksById().containsKey(dataBlockId);
 			}
-		}
-		
-		return found;
+		}));
 	}
 }

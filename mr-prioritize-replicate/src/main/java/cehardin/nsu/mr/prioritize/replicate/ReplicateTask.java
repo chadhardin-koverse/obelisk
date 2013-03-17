@@ -10,30 +10,27 @@ package cehardin.nsu.mr.prioritize.replicate;
  */
 public class ReplicateTask implements Task {
 	private final DataBlock dataBlock;
+	private final Cluster cluster;
+	private final Rack fromRack;
+	private final Rack toRack;
 	private final Node fromNode;
 	private final Node toNode;
 	private final Runnable callback;
 
-	public ReplicateTask(DataBlock dataBlock, Node fromNode, Node toNode, Runnable callback) {
+	public ReplicateTask(DataBlock dataBlock, Cluster cluster, Rack fromRack, Rack toRack, Node fromNode, Node toNode, Runnable callback) {
 		this.dataBlock = dataBlock;
+		this.cluster = cluster;
+		this.fromRack = fromRack;
+		this.toRack = toRack;
 		this.fromNode = fromNode;
 		this.toNode = toNode;
 		this.callback = callback;
 	}
+
+	
 	
 	public void run() {
 		final long size = dataBlock.getSize();
-		final Rack fromRack = fromNode.getRack();
-		final Rack toRack = toNode.getRack();
-		final Cluster cluster = fromRack.getCluster();
-	
-		if(!fromNode.getDataBlocks().contains(dataBlock)) {
-			return;
-		}
-		
-		if(dataBlock.getNodes().contains(toNode)) {
-			return;
-		}
 		
 		fromNode.getDiskResource().consume(size, new Runnable() {
 
