@@ -4,6 +4,8 @@
  */
 package cehardin.nsu.mr.prioritize.replicate;
 
+import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
+
 /**
  *
  * @author Chad

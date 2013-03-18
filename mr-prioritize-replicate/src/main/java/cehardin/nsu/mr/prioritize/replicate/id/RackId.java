@@ -2,15 +2,15 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package cehardin.nsu.mr.prioritize.replicate;
+package cehardin.nsu.mr.prioritize.replicate.id;
 
 /**
  *
  * @author Chad
  */
-public class NodeId extends AbstractId {
+public class RackId extends AbstractId {
 
-    public NodeId(String value) {
+    public RackId(String value) {
         super(value);
     }
     

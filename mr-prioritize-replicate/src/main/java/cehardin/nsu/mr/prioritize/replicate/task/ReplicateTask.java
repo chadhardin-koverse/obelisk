@@ -2,7 +2,12 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package cehardin.nsu.mr.prioritize.replicate;
+package cehardin.nsu.mr.prioritize.replicate.task;
+
+import cehardin.nsu.mr.prioritize.replicate.DataBlock;
+import cehardin.nsu.mr.prioritize.replicate.hardware.Cluster;
+import cehardin.nsu.mr.prioritize.replicate.hardware.Node;
+import cehardin.nsu.mr.prioritize.replicate.hardware.Rack;
 
 /**
  *
@@ -17,7 +22,14 @@ public class ReplicateTask implements Task {
 	private final Node toNode;
 	private final Runnable callback;
 
-	public ReplicateTask(DataBlock dataBlock, Cluster cluster, Rack fromRack, Rack toRack, Node fromNode, Node toNode, Runnable callback) {
+	public ReplicateTask(
+                DataBlock dataBlock, 
+                Cluster cluster, 
+                Rack fromRack, 
+                Rack toRack, 
+                Node fromNode, 
+                Node toNode, 
+                Runnable callback) {
 		this.dataBlock = dataBlock;
 		this.cluster = cluster;
 		this.fromRack = fromRack;
@@ -38,7 +50,11 @@ public class ReplicateTask implements Task {
 				fromRack.getNetworkResource().consume(size, new Runnable() {
 
 					public void run() {
-						cluster.getNetworkResource().consume(size, new Runnable() {
+                                                if(fromRack.equals(toRack)) {
+                                                    toNode.getDiskResource().consume(size, callback);
+                                                }
+                                                else {
+                                                    cluster.getNetworkResource().consume(size, new Runnable() {
 
 							public void run() {
 								toRack.getNetworkResource().consume(size, new Runnable() {
@@ -48,7 +64,8 @@ public class ReplicateTask implements Task {
 									}
 								});
 							}
-						});
+                                                    });
+                                                }
 					}
 				});
 			}

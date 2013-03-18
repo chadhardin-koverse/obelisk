@@ -2,8 +2,10 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package cehardin.nsu.mr.prioritize.replicate;
+package cehardin.nsu.mr.prioritize.replicate.task;
 
+import cehardin.nsu.mr.prioritize.replicate.DataBlock;
+import cehardin.nsu.mr.prioritize.replicate.hardware.Node;
 import com.google.common.base.Preconditions;
 
 /**

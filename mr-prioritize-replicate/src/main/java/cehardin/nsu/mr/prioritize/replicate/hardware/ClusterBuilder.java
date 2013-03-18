@@ -2,8 +2,13 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package cehardin.nsu.mr.prioritize.replicate;
+package cehardin.nsu.mr.prioritize.replicate.hardware;
 
+import cehardin.nsu.mr.prioritize.replicate.DataBlock;
+import cehardin.nsu.mr.prioritize.replicate.Resource;
+import cehardin.nsu.mr.prioritize.replicate.id.RackId;
+import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
+import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;

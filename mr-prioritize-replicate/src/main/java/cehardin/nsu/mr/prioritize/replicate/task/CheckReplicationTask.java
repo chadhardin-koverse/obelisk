@@ -2,8 +2,13 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package cehardin.nsu.mr.prioritize.replicate;
+package cehardin.nsu.mr.prioritize.replicate.task;
 
+import cehardin.nsu.mr.prioritize.replicate.DataBlock;
+import cehardin.nsu.mr.prioritize.replicate.hardware.Cluster;
+import cehardin.nsu.mr.prioritize.replicate.hardware.Node;
+import cehardin.nsu.mr.prioritize.replicate.hardware.Rack;
+import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import com.google.common.collect.Iterables;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -21,7 +26,7 @@ import java.util.concurrent.ExecutorService;
  * @author Chad
  */
 public class CheckReplicationTask implements Task {
-
+        private final Runnable callback;
 	private final Cluster cluster;
 	private final ExecutorService executorService;
 
@@ -31,31 +36,41 @@ public class CheckReplicationTask implements Task {
 		final Set<DataBlockId> thirdPriorityReplicateInterRack = new HashSet<DataBlockId>();
 
 		for (final Map.Entry<DataBlockId, Integer> dataBlockCount : cluster.getDataBlockReplicationCount().entrySet()) {
-			final DataBlockId dataBlock = dataBlockCount.getKey();
+			final DataBlockId dataBlockId = dataBlockCount.getKey();
 			final int count = dataBlockCount.getValue();
 
 			if (count == 1) {
-				firstPriorityReplicateIntraRack.add(dataBlock);
-				thirdPriorityReplicateInterRack.add(dataBlock);
+				firstPriorityReplicateIntraRack.add(dataBlockId);
+				thirdPriorityReplicateInterRack.add(dataBlockId);
 			} else if (count == 2) {
-				final Node node1 = Iterables.get(cluster.findNodesOfDataBlock(dataBlock), 0);
-				final Node node2 = Iterables.get(cluster.findNodesOfDataBlock(dataBlock), 1);
+				final Node node1 = Iterables.get(cluster.findNodesOfDataBlock(dataBlockId), 0);
+				final Node node2 = Iterables.get(cluster.findNodesOfDataBlock(dataBlockId), 1);
 				final Rack rack1 = cluster.findRackOfNode(node1);
 				final Rack rack2 = cluster.findRackOfNode(node2);
 
 				if (rack1 != rack2) {
-					secondPriorityReplicateIntraRack.add(dataBlock);
+					secondPriorityReplicateIntraRack.add(dataBlockId);
 				} else {
-					thirdPriorityReplicateInterRack.add(dataBlock);
+					thirdPriorityReplicateInterRack.add(dataBlockId);
 				}
 			}
 		}
 
 
 		for (final DataBlockId dataBlockId : firstPriorityReplicateIntraRack) {
-			final Node fromNode = dataBlock.getNodes().iterator().next();
-			final Node toNode = fromNode.getRack().pickRandomNodeNot(fromNode);
-			final ReplicateTask replicateTask = new ReplicateTask(dataBlock, fromNode, toNode, null);
+                        final Set<Node> nodes = cluster.findNodesOfDataBlock(dataBlockId);
+			final Node fromNode = nodes.iterator().next();
+                        final Rack rack = cluster.findRackOfNode(fromNode);
+			final Node toNode = rack.pickRandomNodeNot(fromNode);
+                        final DataBlock dataBlock = fromNode.getDataBlocksById().get(dataBlockId).iterator().next();
+			final ReplicateTask replicateTask = new ReplicateTask(
+                                dataBlock, 
+                                cluster,
+                                rack,
+                                rack,
+                                fromNode, 
+                                toNode, 
+                                callback);
 
 			executorService.execute(replicateTask);
 		}

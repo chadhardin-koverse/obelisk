@@ -4,6 +4,7 @@
  */
 package cehardin.nsu.mr.prioritize.replicate;
 
+import cehardin.nsu.mr.prioritize.replicate.hardware.Cluster;
 import java.util.Map;
 import java.util.Set;
 
