@@ -8,14 +8,14 @@ package cehardin.nsu.mr.prioritize.replicate;
  *
  * @author Chad
  */
-public abstract class AbstractHardware implements Hardware {
-	private final String name;
+public abstract class AbstractHardware<ID extends Id> implements Hardware<ID> {
+	private final ID id;
 
-	public AbstractHardware(String name) {
-		this.name = name;
+	public AbstractHardware(ID id) {
+		this.id = id;
 	}
 
-	public String getName() {
-		return name;
+	public ID getId() {
+		return id;
 	}
 }

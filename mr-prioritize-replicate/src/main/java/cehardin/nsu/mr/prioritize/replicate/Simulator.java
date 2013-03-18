@@ -30,7 +30,6 @@ public class Simulator implements Callable<Object> {
 			final Collection<Future<Double>> futures = new ArrayList<Future<Double>>(simulateds.size());
 			for(final Simulated simulated : simulateds) {
 				futures.add(executorService.submit(new Callable<Double>() {
-
 					public Double call() throws Exception {
 						return simulated.execute(availableStepTime);
 					}

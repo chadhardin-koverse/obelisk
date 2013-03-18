@@ -8,6 +8,10 @@ package cehardin.nsu.mr.prioritize.replicate;
  *
  * @author Chad
  */
-public interface Hardware<ID extends Id> {
-	ID getId();
+public class NodeId extends AbstractId {
+
+    public NodeId(String value) {
+        super(value);
+    }
+    
 }

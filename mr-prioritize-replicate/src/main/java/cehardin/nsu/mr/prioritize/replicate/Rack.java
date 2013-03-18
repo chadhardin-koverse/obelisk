@@ -22,12 +22,12 @@ import java.util.Set;
  *
  * @author Chad
  */
-public class Rack extends AbstractHardware {
+public class Rack extends AbstractHardware<RackId> {
 	private final Set<Node> nodes;
 	private final Resource networkResource;
 
-	public Rack(Set<Node> nodes, Resource networkResource, String name) {
-		super(name);
+	public Rack(Set<Node> nodes, Resource networkResource, RackId id) {
+		super(id);
 		this.nodes = nodes;
 		this.networkResource = networkResource;
 	}
@@ -52,12 +52,12 @@ public class Rack extends AbstractHardware {
 		return dataBlocks;
 	}
 	
-	public Map<String, Set<DataBlock>> getDataBlocksById() {
-		final Map<String, Set<DataBlock>> blocksById = Maps.newHashMap();
+	public Map<DataBlockId, Set<DataBlock>> getDataBlocksById() {
+		final Map<DataBlockId, Set<DataBlock>> blocksById = Maps.newHashMap();
 		
 		for(final Node node : getNodes()) {
-			for(final Map.Entry<String, Set<DataBlock>> nodeBlocksById : node.getDataBlocksById().entrySet()) {
-				final String id = nodeBlocksById.getKey();
+			for(final Map.Entry<DataBlockId, Set<DataBlock>> nodeBlocksById : node.getDataBlocksById().entrySet()) {
+				final DataBlockId id = nodeBlocksById.getKey();
 				final Set<DataBlock> dataBlocks = nodeBlocksById.getValue();
 				
 				if(blocksById.containsKey(id)) {
@@ -72,7 +72,7 @@ public class Rack extends AbstractHardware {
 		return Collections.unmodifiableMap(blocksById);
 	}
 	
-	public Map<String, Integer> getDataBlockReplicationCount() {
+	public Map<DataBlockId, Integer> getDataBlockReplicationCount() {
 		return Collections.unmodifiableMap(
 			Maps.transformValues(getDataBlocksById(), new Function<Set<DataBlock>, Integer>() {
 
@@ -105,7 +105,7 @@ public class Rack extends AbstractHardware {
 			
 	}
 	
-	public Set<Node> findNodesOfDataBlockId(final String dataBlockId) {
+	public Set<Node> findNodesOfDataBlockId(final DataBlockId dataBlockId) {
 		return Collections.unmodifiableSet(
 			Sets.filter(getNodes(), new Predicate<Node>() {
 

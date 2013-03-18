@@ -8,17 +8,9 @@ package cehardin.nsu.mr.prioritize.replicate;
  *
  * @author Chad
  */
-public class DataBlockId {
-	private final String value;
+public class DataBlockId extends AbstractId {
 
 	public DataBlockId(String value) {
-		this.value = value;
-	}
-	
-	@Override
-	public boolean equals(Object o) {
-		final boolean equal;
-		
-		if()
+		super(value);
 	}
 }

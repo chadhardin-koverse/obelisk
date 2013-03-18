@@ -50,12 +50,12 @@ public class Cluster {
 		return dataBlocks;
 	}
 	
-	public Map<String, Set<DataBlock>> getDataBlocksById() {
-		final Map<String, Set<DataBlock>> blocksById = Maps.newHashMap();
+	public Map<DataBlockId, Set<DataBlock>> getDataBlocksById() {
+		final Map<DataBlockId, Set<DataBlock>> blocksById = Maps.newHashMap();
 		
 		for(final Rack rack : getRacks()) {
-			for(final Map.Entry<String, Set<DataBlock>> nodeBlocksById : rack.getDataBlocksById().entrySet()) {
-				final String id = nodeBlocksById.getKey();
+			for(final Map.Entry<DataBlockId, Set<DataBlock>> nodeBlocksById : rack.getDataBlocksById().entrySet()) {
+				final DataBlockId id = nodeBlocksById.getKey();
 				final Set<DataBlock> dataBlocks = nodeBlocksById.getValue();
 				
 				if(blocksById.containsKey(id)) {
@@ -70,7 +70,7 @@ public class Cluster {
 		return Collections.unmodifiableMap(blocksById);
 	}
 
-	public Map<String, Integer> getDataBlockReplicationCount() {
+	public Map<DataBlockId, Integer> getDataBlockReplicationCount() {
 		return Collections.unmodifiableMap(
 			Maps.transformValues(getDataBlocksById(), new Function<Set<DataBlock>, Integer>() {
 
@@ -112,7 +112,7 @@ public class Cluster {
 		});
 	}
 
-	public Set<Node> findNodesOfDataBlock(String dataBlockId) {
+	public Set<Node> findNodesOfDataBlock(DataBlockId dataBlockId) {
 		final Set<Node> found = new HashSet<Node>();
 
 		for (final Rack rack : racks) {

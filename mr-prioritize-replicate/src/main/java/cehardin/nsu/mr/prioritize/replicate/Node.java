@@ -16,18 +16,16 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Chad
  */
-public class Node extends AbstractHardware {
+public class Node extends AbstractHardware<NodeId> {
 	private final Resource diskResource;
 	private final Set<DataBlock> dataBlocks;
 
-	public Node(String name, Resource diskResource, Set<DataBlock> dataBlocks) {
-		super(name);
+	public Node(NodeId id, Resource diskResource, Set<DataBlock> dataBlocks) {
+		super(id);
 		this.diskResource = diskResource;
 		this.dataBlocks = dataBlocks;
 	}
 
-
-	
 	public Resource getDiskResource() {
 		return diskResource;
 	}
@@ -36,11 +34,11 @@ public class Node extends AbstractHardware {
 		return dataBlocks;
 	}
 	
-	public Map<String, Set<DataBlock>> getDataBlocksById() {
-		final Map<String, Set<DataBlock>> blocksById = Maps.newHashMap();
+	public Map<DataBlockId, Set<DataBlock>> getDataBlocksById() {
+		final Map<DataBlockId, Set<DataBlock>> blocksById = Maps.newHashMap();
 		
 		for(final DataBlock dataBlock : getDataBlocks()) {
-			final String id = dataBlock.getId();
+			final DataBlockId id = dataBlock.getId();
 			
 			if(!blocksById.containsKey(id)) {
 				blocksById.put(id, new HashSet<DataBlock>());

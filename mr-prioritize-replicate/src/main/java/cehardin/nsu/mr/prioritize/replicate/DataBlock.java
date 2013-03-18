@@ -9,15 +9,15 @@ package cehardin.nsu.mr.prioritize.replicate;
  * @author Chad
  */
 public class DataBlock {
-	private final String id;
+	private final DataBlockId id;
 	private final int size;
 
-	public DataBlock(String id, int size) {
+	public DataBlock(DataBlockId id, int size) {
 		this.id = id;
 		this.size = size;
 	}
 
-	public String getId() {
+	public DataBlockId getId() {
 		return id;
 	}
 	

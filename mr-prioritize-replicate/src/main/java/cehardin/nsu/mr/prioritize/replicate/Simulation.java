@@ -4,10 +4,14 @@
  */
 package cehardin.nsu.mr.prioritize.replicate;
 
+import java.util.Map;
+import java.util.Set;
+
 /**
  *
  * @author Chad
  */
-public interface Hardware<ID extends Id> {
-	ID getId();
+public class Simulation {
+    private final Cluster cluster;
+    private final Set<String> mapReduceTaskIds;
 }
