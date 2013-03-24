@@ -21,6 +21,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.SortedMap;
 
 /**
  *
@@ -77,15 +78,42 @@ public class Rack extends AbstractHardware<RackId> {
 	}
 	
 	public Map<DataBlockId, Integer> getDataBlockReplicationCount() {
-		return Collections.unmodifiableMap(
-			Maps.transformValues(getDataBlocksById(), new Function<Set<DataBlock>, Integer>() {
-
-			public Integer apply(Set<DataBlock> dataBlocks) {
-				return dataBlocks.size();
+		final Map<DataBlockId, Integer> result = Maps.newHashMap();
+		
+		for(final Node node : getNodes()) {
+			for(final DataBlock dataBlock : node.getDataBlocks()) {
+				final DataBlockId dataBlockId = dataBlock.getId();
+				
+				if(result.containsKey(dataBlockId)) {
+					final int count = result.get(dataBlockId);
+					result.put(dataBlockId, count + 1);
+				}
+				else {
+					result.put(dataBlockId, 1);
+				}
+			}
+		}
+		
+		return Collections.unmodifiableMap(result);
+	}
+	
+	public SortedMap<Integer, Set<DataBlockId>> getReplicationCounts() {
+		final SortedMap<Integer, Set<DataBlockId>> result = Maps.newTreeMap();
+		
+		for(final Map.Entry<DataBlockId, Integer> entry : getDataBlockReplicationCount().entrySet()) {
+			final DataBlockId dataBlockId = entry.getKey();
+			final Integer count = entry.getValue();
+			
+			if(!result.containsKey(count)) {
+				result.put(count, new HashSet<DataBlockId>());
 			}
 			
-		}));
+			result.get(count).add(dataBlockId);
+		}
+		
+		return Collections.unmodifiableSortedMap(result);
 	}
+	
 	
 	public Node pickRandomNode() {
 		final Random random = new Random();

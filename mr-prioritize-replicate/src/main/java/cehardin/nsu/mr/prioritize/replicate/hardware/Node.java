@@ -38,19 +38,15 @@ public class Node extends AbstractHardware<NodeId> {
 		return dataBlocks;
 	}
 	
-	public Map<DataBlockId, Set<DataBlock>> getDataBlocksById() {
-		final Map<DataBlockId, Set<DataBlock>> blocksById = Maps.newHashMap();
+	public Map<DataBlockId, DataBlock> getDataBlockById() {
+		final Map<DataBlockId, DataBlock> blockById = Maps.newHashMap();
 		
 		for(final DataBlock dataBlock : getDataBlocks()) {
 			final DataBlockId id = dataBlock.getId();
 			
-			if(!blocksById.containsKey(id)) {
-				blocksById.put(id, new HashSet<DataBlock>());
-			}
-			
-			blocksById.get(id).add(dataBlock);
+			blockById.put(id, dataBlock);
 		}
 		
-		return Collections.unmodifiableMap(blocksById);
+		return Collections.unmodifiableMap(blockById);
 	}
 }

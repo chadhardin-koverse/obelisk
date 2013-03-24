@@ -10,15 +10,20 @@ import cehardin.nsu.mr.prioritize.replicate.hardware.Rack;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.id.MapReduceTaskId;
 import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
+import cehardin.nsu.mr.prioritize.replicate.id.TaskId;
 import cehardin.nsu.mr.prioritize.replicate.task.MapReduceTask;
+import cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.google.common.util.concurrent.Futures;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -31,20 +36,35 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class Simulator implements Callable<Object> {
 	private final ExecutorService executorService;
-	private final Collection<Simulated> simulateds = new ArrayList<Simulated>();
-	private final Queue<DataBlockId> mapReduceTaskDataBlockQueue = Queues.newLinkedBlockingDeque();
-	private final Map<NodeId, MapReduceTask> nodeTasks = new HashMap<NodeId, MapReduceTask>();
+	private final Variables variables;
+	private final TaskNodeAllocator taskNodeAllocator;
+	private final ReplicateTaskScheduler replicateTaskScheduler;
 	private final Cluster cluster;
 	
+	public Simulator(
+		final Variables variables,
+		final ExecutorService executorService) {
+		this.variables = variables;
+		this.executorService = executorService;
+		taskQueue = new ArrayBlockingQueue<TaskId>(
+			variables.getTaskIds().size(),
+			false,
+			variables.getTaskIds());
+	}
+	
 	public Object call() throws Exception {
+		final List<ReplicateTask> replicateTasks = Lists.newLinkedList();
 		final double totalTime = 1000000;
 		final double timeStep = 1000;
 		double currentTime = 0;
 	
+		
+		
 		for(final DataBlockId dataBlockId : mapReduceTaskDataBlockQueue) {
 		    final Set<Node> nodes = cluster.findNodesOfDataBlock(dataBlockId);
 		    
 		}
+		
 		for(final Rack rack : cluster.getRacks()) {
 		    for(final Node node : rack.getNodes()) {
 			if(!nodeTasks.containsKey(node)) {
@@ -59,6 +79,10 @@ public class Simulator implements Callable<Object> {
 		while(currentTime < totalTime) {
 			final double availableStepTime = (currentTime + timeStep) > totalTime ? totalTime - currentTime : timeStep;
 			final Collection<Future<Double>> futures = new ArrayList<Future<Double>>(simulateds.size());
+			
+			if(replicateTasks.isEmpty()) {
+				replicateTasks.
+			}
 			for(final Simulated simulated : simulateds) {
 				futures.add(executorService.submit(new Callable<Double>() {
 					public Double call() throws Exception {

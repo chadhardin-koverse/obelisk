@@ -9,19 +9,17 @@ import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import cehardin.nsu.mr.prioritize.replicate.id.RackId;
 import cehardin.nsu.mr.prioritize.replicate.id.TaskId;
 import com.google.common.base.Function;
+import java.util.Map;
 import java.util.Set;
 
 /**
  *
  * @author Chad
  */
-public interface TaskScheduler {
-	NodeId schedule(
-		TaskId taskId, 
-		DataBlockId dataBlockId,
-		Set<RackId> rackIds,
+public interface TaskNodeAllocator {
+	Map<TaskId, NodeId> allocate(
+		Set<TaskId> taskIds,
 		Set<NodeId> nodeIds,
 		Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds,
-		Function<NodeId, Integer> nodeIdToNumTasks,
-		int maxTasksPerNode);
+		Function<TaskId, DataBlockId> taskIdToDataBlockId);
 }
