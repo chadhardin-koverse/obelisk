@@ -79,6 +79,36 @@ public class Variables implements Serializable {
 		}
 	}
 	
+	public class MapReduceJob {
+		private final long startTime;
+		private final TimeUnit timeUnit;
+		private final Set<TaskId> taskIds;
+		private final Function<TaskId, DataBlockId> taskIdToDataBlockId;
+
+		public MapReduceJob(long startTime, TimeUnit timeUnit, Set<TaskId> taskIds, Function<TaskId, DataBlockId> taskIdToDataBlockId) {
+			this.startTime = startTime;
+			this.timeUnit = timeUnit;
+			this.taskIds = taskIds;
+			this.taskIdToDataBlockId = taskIdToDataBlockId;
+		}
+
+		public long getStartTime() {
+			return startTime;
+		}
+
+		public TimeUnit getTimeUnit() {
+			return timeUnit;
+		}
+
+		public Set<TaskId> getTaskIds() {
+			return taskIds;
+		}
+
+		public Function<TaskId, DataBlockId> getTaskIdToDataBlockId() {
+			return taskIdToDataBlockId;
+		}
+	}
+	
 	private final Bandwidth diskBandwidth;
 	private final Bandwidth rackBandwidth;
 	private final Bandwidth clusterBandwidth;
@@ -89,13 +119,28 @@ public class Variables implements Serializable {
 	private final Set<RackId> rackIds;
 	private final Set<NodeId> nodeIds;
 	private final Set<DataBlockId> dataBlockIds;
-	private final Set<TaskId> taskIds;
 	private final Function<NodeId, RackId> nodeIdToRackId;
 	private final Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds;
-	private final Function<TaskId, DataBlockId> taskIdToDataBlockId;
-	private final TaskNodeAllocator taskScheduler;
-
-	public Variables(Bandwidth diskBandwidth, Bandwidth rackBandwidth, Bandwidth clusterBandwidth, int blockSize, int maxConcurrentTasks, int maxTasksPerNode, SortedSet<NodeFailure> nodeFailures, Set<RackId> rackIds, Set<NodeId> nodeIds, Set<DataBlockId> dataBlockIds, Set<TaskId> taskIds, Function<NodeId, RackId> nodeIdToRackId, Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds, Function<TaskId, DataBlockId> taskIdToDataBlockId, TaskNodeAllocator taskScheduler) {
+	private final TaskNodeAllocator taskNodeAllocator;
+	private final ReplicateTaskScheduler replicateTaskScheduler;
+	private final MapReduceJob mapReduceJob;
+	
+	public Variables(
+		Bandwidth diskBandwidth, 
+		Bandwidth rackBandwidth, 
+		Bandwidth clusterBandwidth, 
+		int blockSize, 
+		int maxConcurrentTasks, 
+		int maxTasksPerNode, 
+		SortedSet<NodeFailure> nodeFailures, 
+		Set<RackId> rackIds, 
+		Set<NodeId> nodeIds, 
+		Set<DataBlockId> dataBlockIds, 
+		Function<NodeId, RackId> nodeIdToRackId, 
+		Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds, 
+		TaskNodeAllocator taskNodeAllocator,
+		ReplicateTaskScheduler replicateTaskScheduler,
+		MapReduceJob mapReduceJob) {
 		this.diskBandwidth = diskBandwidth;
 		this.rackBandwidth = rackBandwidth;
 		this.clusterBandwidth = clusterBandwidth;
@@ -106,11 +151,11 @@ public class Variables implements Serializable {
 		this.rackIds = rackIds;
 		this.nodeIds = nodeIds;
 		this.dataBlockIds = dataBlockIds;
-		this.taskIds = taskIds;
 		this.nodeIdToRackId = nodeIdToRackId;
 		this.dataBlockIdToNodeIds = dataBlockIdToNodeIds;
-		this.taskIdToDataBlockId = taskIdToDataBlockId;
-		this.taskScheduler = taskScheduler;
+		this.taskNodeAllocator = taskNodeAllocator;
+		this.replicateTaskScheduler = replicateTaskScheduler;
+		this.mapReduceJob = mapReduceJob;
 	}
 
 	public Bandwidth getDiskBandwidth() {
@@ -153,10 +198,6 @@ public class Variables implements Serializable {
 		return dataBlockIds;
 	}
 
-	public Set<TaskId> getTaskIds() {
-		return taskIds;
-	}
-
 	public Function<NodeId, RackId> getNodeIdToRackId() {
 		return nodeIdToRackId;
 	}
@@ -165,13 +206,17 @@ public class Variables implements Serializable {
 		return dataBlockIdToNodeIds;
 	}
 
-	public Function<TaskId, DataBlockId> getTaskIdToDataBlockId() {
-		return taskIdToDataBlockId;
+	public TaskNodeAllocator getTaskNodeAllocator() {
+		return taskNodeAllocator;
 	}
 
-	public TaskNodeAllocator getTaskScheduler() {
-		return taskScheduler;
+	public ReplicateTaskScheduler getReplicateTaskScheduler() {
+		return replicateTaskScheduler;
 	}
 
+	public MapReduceJob getMapReduceJob() {
+		return mapReduceJob;
+	}
+	
 	
 }

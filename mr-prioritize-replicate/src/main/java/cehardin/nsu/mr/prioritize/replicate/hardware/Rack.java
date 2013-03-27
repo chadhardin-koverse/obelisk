@@ -8,6 +8,7 @@ import cehardin.nsu.mr.prioritize.replicate.DataBlock;
 import cehardin.nsu.mr.prioritize.replicate.Resource;
 import cehardin.nsu.mr.prioritize.replicate.id.RackId;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
+import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
@@ -42,6 +43,15 @@ public class Rack extends AbstractHardware<RackId> {
 	public Set<Node> getNodes() {
 		return nodes;
 	}
+	
+	public Map<NodeId, Node> getNodeMap() {
+		return Collections.unmodifiableMap(Maps.uniqueIndex(nodes, new Function<Node, NodeId>() {
+
+			public NodeId apply(Node node) {
+				return node.getId();
+			}
+		}));
+	}
 
 	public Resource getNetworkResource() {
 		return networkResource;
@@ -61,16 +71,15 @@ public class Rack extends AbstractHardware<RackId> {
 		final Map<DataBlockId, Set<DataBlock>> blocksById = Maps.newHashMap();
 		
 		for(final Node node : getNodes()) {
-			for(final Map.Entry<DataBlockId, Set<DataBlock>> nodeBlocksById : node.getDataBlocksById().entrySet()) {
+			for(final Map.Entry<DataBlockId, DataBlock> nodeBlocksById : node.getDataBlockById().entrySet()) {
 				final DataBlockId id = nodeBlocksById.getKey();
-				final Set<DataBlock> dataBlocks = nodeBlocksById.getValue();
+				final DataBlock dataBlock = nodeBlocksById.getValue();
 				
-				if(blocksById.containsKey(id)) {
-					blocksById.get(id).addAll(dataBlocks);
+				if(!blocksById.containsKey(id)) {
+					blocksById.put(id, new HashSet<DataBlock>());	
 				}
-				else {
-					blocksById.put(id, dataBlocks);
-				}
+				
+				blocksById.get(id).add(dataBlock);
 			}
 		}
 		
@@ -142,7 +151,7 @@ public class Rack extends AbstractHardware<RackId> {
 			Sets.filter(getNodes(), new Predicate<Node>() {
 
 			public boolean apply(final Node node) {
-				return node.getDataBlocksById().containsKey(dataBlockId);
+				return node.getDataBlockById().containsKey(dataBlockId);
 			}
 		}));
 	}

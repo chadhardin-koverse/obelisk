@@ -7,6 +7,7 @@ package cehardin.nsu.mr.prioritize.replicate.hardware;
 import cehardin.nsu.mr.prioritize.replicate.DataBlock;
 import cehardin.nsu.mr.prioritize.replicate.Resource;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
+import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -109,6 +110,16 @@ public class Cluster {
 		}
 
 		return Collections.unmodifiableSortedMap(result);
+	}
+	
+	public Map<NodeId, Node> getNodeMap() {
+		final Map<NodeId, Node> nodeMap = Maps.newHashMap();
+		
+		for(final Rack rack : getRacks()) {
+			nodeMap.putAll(rack.getNodeMap());
+		}
+		
+		return Collections.unmodifiableMap(nodeMap);
 	}
 
 	public Rack pickRandomRack() {
