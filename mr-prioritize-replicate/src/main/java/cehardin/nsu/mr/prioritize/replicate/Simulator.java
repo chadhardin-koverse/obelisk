@@ -5,6 +5,7 @@
 package cehardin.nsu.mr.prioritize.replicate;
 
 import cehardin.nsu.mr.prioritize.replicate.hardware.Cluster;
+import cehardin.nsu.mr.prioritize.replicate.hardware.ClusterBuilder;
 import cehardin.nsu.mr.prioritize.replicate.hardware.Node;
 import cehardin.nsu.mr.prioritize.replicate.hardware.Rack;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
@@ -49,19 +50,15 @@ public class Simulator implements Callable<Object> {
 	private final Logger logger = Logger.getLogger("Simulator");
 	private final ExecutorService executorService;
 	private final Variables variables;
-	private final TaskNodeAllocator taskNodeAllocator;
-	private final ReplicateTaskScheduler replicateTaskScheduler;
 	private final Cluster cluster;
 	
 	public Simulator(
 		final Variables variables,
 		final ExecutorService executorService) {
+		final ClusterBuilder clusterBuilder = new ClusterBuilder();
 		this.variables = variables;
 		this.executorService = executorService;
-		taskQueue = new ArrayBlockingQueue<TaskId>(
-			variables.getTaskIds().size(),
-			false,
-			variables.getTaskIds());
+		this.cluster = clusterBuilder.buildCluster(variables);
 	}
 	
 	public Object call() throws Exception {
@@ -108,8 +105,7 @@ public class Simulator implements Callable<Object> {
 						final DataBlockId dataBlockId = mapReduceJob.getTaskIdToDataBlockId().apply(taskId);
 						final MapReduceTask mapReduceTask = new MapReduceTask(
 							cluster.getNodeMap().get(nodeId), 
-							cluster.getNodeMap().get(nodeId).getDataBlockById().get(dataBlockId), 
-							null);
+							cluster.getNodeMap().get(nodeId).getDataBlockById().get(dataBlockId));
 						
 						tasks.add(mapReduceTask);
 					}

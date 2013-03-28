@@ -7,6 +7,7 @@ package cehardin.nsu.mr.prioritize.replicate;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
 
 /**
  *
@@ -36,7 +37,6 @@ public class Resource implements Simulated {
 			timeUsed += (capacityUsed / capacityInMs);
 			
 			if(reservation.isDone()) {
-				reservation.getCallback().run();
 				reservationIterator.remove();
 			}
 		}
@@ -44,25 +44,32 @@ public class Resource implements Simulated {
 		return timeUsed;
 	}
 	
-	public void consume(final double amount, final Runnable callback) {
-		reservations.add(new Reservation(callback, amount));
+	public void consume(final double amount) {
+		final Reservation reservation = new Reservation(amount);
+		reservations.add(reservation);
+		reservation.waitTillDone();
 	}
 	
 	private static class Reservation {
-		private final Runnable callback;
 		private final double needed;
+		private final CountDownLatch completionLatch;
 		private double used;
-
-		public Reservation(final Runnable callback, final double needed) {
-			this.callback = callback;
+		
+		public Reservation(final double needed) {
 			this.needed = needed;
 			this.used = 0;
+			this.completionLatch = new CountDownLatch(1);
 		}
 
-		public Runnable getCallback() {
-			return callback;
+		public void waitTillDone() {
+			try {
+				completionLatch.await();
+			}
+			catch(InterruptedException e) {
+				throw new RuntimeException(e);
+			}
 		}
-
+		
 		public double getNeeded() {
 			return needed;
 		}
@@ -83,6 +90,10 @@ public class Resource implements Simulated {
 			final double taken = available <= getLeft() ? available : getLeft();
 			
 			used += taken;
+			
+			if(isDone()) {
+				completionLatch.countDown();
+			}
 			
 			return taken;
 		}

@@ -15,17 +15,15 @@ import com.google.common.base.Preconditions;
 public class MapReduceTask implements Task {
 	private final Node node;
 	private final DataBlock dataBlock;
-        private final Runnable callback;
 
-	public MapReduceTask(Node node, DataBlock dataBlock, Runnable callback) {
+	public MapReduceTask(Node node, DataBlock dataBlock) {
 		this.node = node;
 		this.dataBlock = dataBlock;
-                this.callback = callback;
 	}
 	
 	public void run() {
 		Preconditions.checkState(node.getDataBlocks().contains(dataBlock));
 		
-                node.getDiskResource().consume(dataBlock.getSize(), callback);
+                node.getDiskResource().consume(dataBlock.getSize());
 	}
 }

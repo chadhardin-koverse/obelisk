@@ -10,7 +10,6 @@ import cehardin.nsu.mr.prioritize.replicate.id.RackId;
 import cehardin.nsu.mr.prioritize.replicate.id.TaskId;
 import com.google.common.base.Function;
 import java.io.Serializable;
-import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
@@ -79,7 +78,7 @@ public class Variables implements Serializable {
 		}
 	}
 	
-	public class MapReduceJob {
+	public static class MapReduceJob {
 		private final long startTime;
 		private final TimeUnit timeUnit;
 		private final Set<TaskId> taskIds;

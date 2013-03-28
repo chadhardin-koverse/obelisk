@@ -43,26 +43,14 @@ public class ReplicateTask implements Task {
     public void run() {
 	final long size = dataBlock.getSize();
 
-	fromNode.getDiskResource().consume(size, new Runnable() {
-	    public void run() {
-		fromRack.getNetworkResource().consume(size, new Runnable() {
-		    public void run() {
-			if (fromRack.equals(toRack)) {
-			    toNode.getDiskResource().consume(size, callback);
-			} else {
-			    cluster.getNetworkResource().consume(size, new Runnable() {
-				public void run() {
-				    toRack.getNetworkResource().consume(size, new Runnable() {
-					public void run() {
-					    toNode.getDiskResource().consume(size, callback);
-					}
-				    });
-				}
-			    });
-			}
-		    }
-		});
-	    }
-	});
+	fromNode.getDiskResource().consume(size);
+	fromRack.getNetworkResource().consume(size);
+	if (fromRack.equals(toRack)) {
+		toNode.getDiskResource().consume(size);
+	} else {
+		cluster.getNetworkResource().consume(size);
+		toRack.getNetworkResource().consume(size);
+		toNode.getDiskResource().consume(size);
+	}
     }
 }
