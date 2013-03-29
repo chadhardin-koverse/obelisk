@@ -8,6 +8,7 @@ import cehardin.nsu.mr.prioritize.replicate.DataBlock;
 import cehardin.nsu.mr.prioritize.replicate.hardware.Cluster;
 import cehardin.nsu.mr.prioritize.replicate.hardware.Node;
 import cehardin.nsu.mr.prioritize.replicate.hardware.Rack;
+import com.google.common.base.Objects;
 
 /**
  *
@@ -43,14 +44,25 @@ public class ReplicateTask implements Task {
     public void run() {
 	final long size = dataBlock.getSize();
 
-	fromNode.getDiskResource().consume(size);
-	fromRack.getNetworkResource().consume(size);
+	fromNode.getDiskResource().consume(this, size);
+	fromRack.getNetworkResource().consume(this, size);
 	if (fromRack.equals(toRack)) {
-		toNode.getDiskResource().consume(size);
+		toNode.getDiskResource().consume(this, size);
 	} else {
-		cluster.getNetworkResource().consume(size);
-		toRack.getNetworkResource().consume(size);
-		toNode.getDiskResource().consume(size);
+		cluster.getNetworkResource().consume(this, size);
+		toRack.getNetworkResource().consume(this, size);
+		toNode.getDiskResource().consume(this, size);
 	}
+    }
+    
+    @Override
+    public String toString() {
+	    return Objects.toStringHelper(getClass()).
+		    add("fromRack", fromRack.getId()).
+		    add("fromNode", fromNode.getId()).
+		    add("toRack", toRack.getId()).
+		    add("toNode", toNode.getId()).
+		    add("dataBlock", dataBlock.getId()).
+		    toString();
     }
 }

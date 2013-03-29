@@ -61,12 +61,12 @@ public class ClusterBuilder {
 			for(final DataBlockId dataBlockId : nodeIdToDataBlockIds.get(nodeId)) {
 				dataBlocks.add(new DataBlock(dataBlockId, variables.getBlockSize()));
 			}
-			nodes.add(new Node(nodeId, new Resource(variables.getDiskBandwidth().getBytesPerMs()), dataBlocks));
+			nodes.add(new Node(nodeId, new Resource(String.format("%s-disk", nodeId),variables.getDiskBandwidth().getBytesPerMs()), dataBlocks));
 		}
 		
-		racks.add(new Rack(nodes, new Resource(variables.getRackBandwidth().getBytesPerMs()), rackId));
+		racks.add(new Rack(nodes, new Resource(String.format("%s-network", rackId),variables.getRackBandwidth().getBytesPerMs()), rackId));
 	}
 	
-	return new Cluster(racks, new Resource(variables.getClusterBandwidth().getBytesPerMs()));
+	return new Cluster(racks, new Resource(String.format("%s-network", "cluster"),variables.getClusterBandwidth().getBytesPerMs()));
     }
 }

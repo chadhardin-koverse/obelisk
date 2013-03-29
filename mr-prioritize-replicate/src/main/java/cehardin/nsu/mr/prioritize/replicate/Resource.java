@@ -4,21 +4,26 @@
  */
 package cehardin.nsu.mr.prioritize.replicate;
 
+import cehardin.nsu.mr.prioritize.replicate.task.Task;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.logging.Logger;
 
 /**
  *
  * @author Chad
  */
 public class Resource implements Simulated {
+	private final Logger logger;
 	private final double capacityInMs;
-	private final Queue<Reservation> reservations = new LinkedList<Reservation>();
+	private final Queue<Reservation> reservations = new ConcurrentLinkedQueue<Reservation>();
 	
-	public Resource(final double capacityInMs) {
+	public Resource(final String name, final double capacityInMs) {
 		this.capacityInMs = capacityInMs;
+		logger = Logger.getLogger("Resource ("+name+")");
 	}
 
 	public double execute(final double timeInMs) {
@@ -36,7 +41,10 @@ public class Resource implements Simulated {
 			
 			timeUsed += (capacityUsed / capacityInMs);
 			
+			logger.info(String.format("Used %.2f bytes in %,dms: %s", capacityUsed, (long)timeUsed, reservation.getTask()));
+			
 			if(reservation.isDone()) {
+				logger.info(String.format("Reservation of %,d bytes fot task is complete: %s", (long)reservation.getNeeded(), reservation.getTask()));
 				reservationIterator.remove();
 			}
 		}
@@ -44,23 +52,29 @@ public class Resource implements Simulated {
 		return timeUsed;
 	}
 	
-	public void consume(final double amount) {
-		final Reservation reservation = new Reservation(amount);
+	public void consume(final Task task, final double amount) {
+		final Reservation reservation = new Reservation(task, amount);
 		reservations.add(reservation);
 		reservation.waitTillDone();
 	}
 	
 	private static class Reservation {
+		private final Task task;
 		private final double needed;
 		private final CountDownLatch completionLatch;
 		private double used;
 		
-		public Reservation(final double needed) {
+		public Reservation(final Task task, final double needed) {
+			this.task = task;
 			this.needed = needed;
 			this.used = 0;
 			this.completionLatch = new CountDownLatch(1);
 		}
 
+		public Task getTask() {
+			return task;
+		}
+		
 		public void waitTillDone() {
 			try {
 				completionLatch.await();

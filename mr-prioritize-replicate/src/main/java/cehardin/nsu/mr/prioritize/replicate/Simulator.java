@@ -19,6 +19,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.JdkFutureAdapters;
@@ -70,6 +71,7 @@ public class Simulator implements Callable<Object> {
 		final AtomicBoolean mapReduceJobStarted = new AtomicBoolean(false);
 		double currentTime = 0;
 	
+		logger.info("Starting");
 		simulateds.add(cluster.getNetworkResource());
 		
 		for(final Rack rack : cluster.getRacks()) {
@@ -124,7 +126,7 @@ public class Simulator implements Callable<Object> {
 				final Future<?> future = executorService.submit(new Runnable() {
 
 					public void run() {
-						logger.info("Task Started: "+task);
+						logger.log(Level.INFO, "Task Started: {0}", task);
 						task.run();
 					}
 				});
@@ -133,7 +135,7 @@ public class Simulator implements Callable<Object> {
 				Futures.addCallback(listenableFuture, new FutureCallback<Object>() {
 
 					public void onSuccess(Object result) {
-						logger.info("Task Finished: "+task);
+						logger.log(Level.INFO, "Task Finished: {0}", task);
 						numRunningTasks.decrementAndGet();
 					}
 
@@ -143,7 +145,6 @@ public class Simulator implements Callable<Object> {
 					}
 				});
 			}
-			
 			
 			for(final Simulated simulated : simulateds) {
 				futures.add(executorService.submit(new Callable<Double>() {
