@@ -72,6 +72,7 @@ public class Simulator implements Callable<Object> {
 		double currentTime = 0;
 	
 		logger.info("Starting");
+		logger.info("Cluster: "+cluster);
 		simulateds.add(cluster.getNetworkResource());
 		
 		for(final Rack rack : cluster.getRacks()) {

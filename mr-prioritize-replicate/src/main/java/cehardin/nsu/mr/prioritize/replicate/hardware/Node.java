@@ -8,6 +8,7 @@ import cehardin.nsu.mr.prioritize.replicate.DataBlock;
 import cehardin.nsu.mr.prioritize.replicate.Resource;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
+import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.util.Collections;
@@ -48,5 +49,13 @@ public class Node extends AbstractHardware<NodeId> {
 		}
 		
 		return Collections.unmodifiableMap(blockById);
+	}
+	
+	@Override
+	public String toString() {
+	    return Objects.toStringHelper(getClass()).
+		    add("dataBlocks", dataBlocks).
+		    add("diskResource", diskResource).
+		    toString();
 	}
 }

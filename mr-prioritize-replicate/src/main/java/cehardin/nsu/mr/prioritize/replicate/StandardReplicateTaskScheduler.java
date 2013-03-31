@@ -22,13 +22,14 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.logging.Logger;
 
 /**
  *
  * @author Chad
  */
 public class StandardReplicateTaskScheduler implements ReplicateTaskScheduler {
-	
+	private final Logger logger = Logger.getLogger(getClass().getSimpleName());
 	public StandardReplicateTaskScheduler() {
 	}
 	
@@ -44,19 +45,23 @@ public class StandardReplicateTaskScheduler implements ReplicateTaskScheduler {
 				final Rack fromRack = racksContainingDataBlock.iterator().next();
 				final Node fromNode = fromRack.findNodesOfDataBlockId(dataBlockId).iterator().next();
 				final DataBlock dataBlock = fromNode.getDataBlockById().get(dataBlockId);
-				final Rack toRack;
-				final Node toNode;
 				
-				if (count == 1) {
+				
+				if(count < 3) {
+				    final Rack toRack;
+				    final Node toNode;
+				    
+				    if (count == 1) {
 					toRack = fromRack;			
-				}
-				else {
+				    }
+				    else {
 					toRack = cluster.pickRandomNodeNot(fromRack);
+				    }
+				
+				    toNode = toRack.pickRandomNode();
+				
+				    tasks.add(new ReplicateTask(dataBlock, cluster, fromRack, toRack, fromNode, toNode, null));
 				}
-				
-				toNode = toRack.pickRandomNode();
-				
-				tasks.add(new ReplicateTask(dataBlock, cluster, fromRack, toRack, fromNode, toNode, null));
 			}
 		}
 

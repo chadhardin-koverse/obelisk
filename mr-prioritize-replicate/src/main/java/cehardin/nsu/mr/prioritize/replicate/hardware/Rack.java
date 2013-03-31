@@ -11,6 +11,7 @@ import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -23,12 +24,14 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.logging.Logger;
 
 /**
  *
  * @author Chad
  */
 public class Rack extends AbstractHardware<RackId> {
+	private final Logger logger = Logger.getLogger(getClass().getSimpleName());
 	private final Set<Node> nodes;
 	private final Resource networkResource;
 
@@ -94,8 +97,7 @@ public class Rack extends AbstractHardware<RackId> {
 				final DataBlockId dataBlockId = dataBlock.getId();
 				
 				if(result.containsKey(dataBlockId)) {
-					final int count = result.get(dataBlockId);
-					result.put(dataBlockId, count + 1);
+					result.put(dataBlockId, result.get(dataBlockId) + 1);
 				}
 				else {
 					result.put(dataBlockId, 1);
@@ -154,5 +156,13 @@ public class Rack extends AbstractHardware<RackId> {
 				return node.getDataBlockById().containsKey(dataBlockId);
 			}
 		}));
+	}
+	
+	@Override
+	public String toString() {
+	    return Objects.toStringHelper(getClass()).
+		    add("nodes", nodes).
+		    add("networkResource", networkResource).
+		    toString();
 	}
 }

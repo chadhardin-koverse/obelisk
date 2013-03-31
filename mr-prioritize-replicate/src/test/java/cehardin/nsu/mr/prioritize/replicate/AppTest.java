@@ -73,14 +73,14 @@ public class AppTest
 		nodeIdToRackId.put(node22, rack2);
 
 		dataBlockIdToNodeIds = Maps.newHashMap();
-		dataBlockIdToNodeIds.put(dataBlock1, Sets.newHashSet(node11, node21));
-		dataBlockIdToNodeIds.put(dataBlock2, Sets.newHashSet(node12, node22));
-		dataBlockIdToNodeIds.put(dataBlock3, Sets.newHashSet(node11, node21));
-		dataBlockIdToNodeIds.put(dataBlock4, Sets.newHashSet(node12, node22));
-		dataBlockIdToNodeIds.put(dataBlock5, Sets.newHashSet(node11, node21));
-		dataBlockIdToNodeIds.put(dataBlock6, Sets.newHashSet(node12, node22));
-		dataBlockIdToNodeIds.put(dataBlock7, Sets.newHashSet(node11, node21));
-		dataBlockIdToNodeIds.put(dataBlock8, Sets.newHashSet(node12, node22));
+		dataBlockIdToNodeIds.put(dataBlock1, Sets.newHashSet(node11, node21, node22));
+		dataBlockIdToNodeIds.put(dataBlock2, Sets.newHashSet(node12, node22, node21));
+		dataBlockIdToNodeIds.put(dataBlock3, Sets.newHashSet(node11, node21, node22));
+		dataBlockIdToNodeIds.put(dataBlock4, Sets.newHashSet(node12, node22, node21));
+		dataBlockIdToNodeIds.put(dataBlock5, Sets.newHashSet(node11, node21, node12));
+		dataBlockIdToNodeIds.put(dataBlock6, Sets.newHashSet(node12, node22, node11));
+		dataBlockIdToNodeIds.put(dataBlock7, Sets.newHashSet(node11, node21, node12));
+		dataBlockIdToNodeIds.put(dataBlock8, Sets.newHashSet(node12, node22, node11));
 		
 		taskIdToDataBlockId = Maps.newHashMap();
 		taskIdToDataBlockId.put(task1, dataBlock1);

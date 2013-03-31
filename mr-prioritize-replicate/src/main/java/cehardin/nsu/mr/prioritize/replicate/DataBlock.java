@@ -5,6 +5,7 @@
 package cehardin.nsu.mr.prioritize.replicate;
 
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
+import com.google.common.base.Objects;
 
 /**
  *
@@ -27,4 +28,11 @@ public class DataBlock {
 		return size;
 	}
 
+	@Override
+	public String toString() {
+	    return Objects.toStringHelper(getClass()).
+		    add("id", id).
+		    add("size", size).
+		    toString();
+	}
 }

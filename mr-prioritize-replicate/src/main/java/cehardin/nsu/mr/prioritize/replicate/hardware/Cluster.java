@@ -9,6 +9,7 @@ import cehardin.nsu.mr.prioritize.replicate.Resource;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -95,18 +96,15 @@ public class Cluster {
 	public SortedMap<Integer, Set<DataBlockId>> getReplicationCounts() {
 		final SortedMap<Integer, Set<DataBlockId>> result = Maps.newTreeMap();
 		
-		for(final Rack rack : getRacks()) {
-			for(final Map.Entry<Integer, Set<DataBlockId>> entry : rack.getReplicationCounts().entrySet()) {
-				final int count = entry.getKey();
-				final Set<DataBlockId> dataBlockIds = entry.getValue();
-				
-				if(result.containsKey(count)) {
-					result.get(count).addAll(dataBlockIds);
-				}
-				else {
-					result.put(count, dataBlockIds);
-				}
+		for(final Map.Entry<DataBlockId, Integer> entry : getDataBlockReplicationCount().entrySet()) {
+			final DataBlockId dataBlockId = entry.getKey();
+			final int count = entry.getValue();
+
+			if(!result.containsKey(count)) {
+			    result.put(count, new HashSet<DataBlockId>());
 			}
+				
+			result.get(count).add(dataBlockId);
 		}
 
 		return Collections.unmodifiableSortedMap(result);
@@ -168,5 +166,13 @@ public class Cluster {
 				return !rack.findNodesOfDataBlockId(dataBlockId).isEmpty();
 			}
 		}));
+	}
+	
+	@Override
+	public String toString() {
+	    return Objects.toStringHelper(getClass()).
+		    add("racks", racks).
+		    add("networkResource", networkResource).
+		    toString();
 	}
 }
