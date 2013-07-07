@@ -29,42 +29,43 @@ import java.util.logging.Logger;
  * @author Chad
  */
 public class StandardReplicateTaskScheduler implements ReplicateTaskScheduler {
-	private final Logger logger = Logger.getLogger(getClass().getSimpleName());
-	public StandardReplicateTaskScheduler() {
-	}
-	
-	public List<ReplicateTask> schedule(Cluster cluster) {
-		final List<ReplicateTask> tasks = Lists.newArrayList();
 
-		for (final Map.Entry<Integer, Set<DataBlockId>> countEntry : cluster.getReplicationCounts().entrySet()) {
-			final int count = countEntry.getKey();
-			final Set<DataBlockId> datablockIds = countEntry.getValue();
-			
-			for (final DataBlockId dataBlockId : datablockIds) {
-				final Set<Rack> racksContainingDataBlock = cluster.findRacksOfDataBlock(dataBlockId);
-				final Rack fromRack = racksContainingDataBlock.iterator().next();
-				final Node fromNode = fromRack.findNodesOfDataBlockId(dataBlockId).iterator().next();
-				final DataBlock dataBlock = fromNode.getDataBlockById().get(dataBlockId);
-				
-				
-				if(count < 3) {
-				    final Rack toRack;
-				    final Node toNode;
-				    
-				    if (count == 1) {
-					toRack = fromRack;			
-				    }
-				    else {
-					toRack = cluster.pickRandomNodeNot(fromRack);
-				    }
-				
-				    toNode = toRack.pickRandomNode();
-				
-				    tasks.add(new ReplicateTask(dataBlock, cluster, fromRack, toRack, fromNode, toNode, null));
-				}
-			}
-		}
+    private final Logger logger = Logger.getLogger(getClass().getSimpleName());
 
-		return Collections.unmodifiableList(tasks);
-	}
+    public StandardReplicateTaskScheduler() {
+    }
+
+    public List<ReplicateTask> schedule(Cluster cluster) {
+        final List<ReplicateTask> tasks = Lists.newArrayList();
+
+        for (final Map.Entry<Integer, Set<DataBlockId>> countEntry : cluster.getReplicationCounts().entrySet()) {
+            final int count = countEntry.getKey();
+            final Set<DataBlockId> datablockIds = countEntry.getValue();
+
+            for (final DataBlockId dataBlockId : datablockIds) {
+                final Set<Rack> racksContainingDataBlock = cluster.findRacksOfDataBlock(dataBlockId);
+                final Rack fromRack = racksContainingDataBlock.iterator().next();
+                final Node fromNode = fromRack.findNodesOfDataBlockId(dataBlockId).iterator().next();
+                final DataBlock dataBlock = fromNode.getDataBlockById().get(dataBlockId);
+
+
+                if (count < 3) {
+                    final Rack toRack;
+                    final Node toNode;
+
+                    if (count == 1) {
+                        toRack = fromRack;
+                    } else {
+                        toRack = cluster.pickRandomNodeNot(fromRack);
+                    }
+
+                    toNode = toRack.pickRandomNode();
+
+                    tasks.add(new ReplicateTask(dataBlock, cluster, fromRack, toRack, fromNode, toNode, null));
+                }
+            }
+        }
+
+        return Collections.unmodifiableList(tasks);
+    }
 }

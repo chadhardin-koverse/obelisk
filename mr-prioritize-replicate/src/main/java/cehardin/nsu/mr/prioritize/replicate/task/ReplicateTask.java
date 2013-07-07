@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package cehardin.nsu.mr.prioritize.replicate.task;
 
 import cehardin.nsu.mr.prioritize.replicate.DataBlock;
@@ -22,47 +18,44 @@ public class ReplicateTask implements Task {
     private final Rack toRack;
     private final Node fromNode;
     private final Node toNode;
-    private final Runnable callback;
 
     public ReplicateTask(
-	    DataBlock dataBlock,
-	    Cluster cluster,
-	    Rack fromRack,
-	    Rack toRack,
-	    Node fromNode,
-	    Node toNode,
-	    Runnable callback) {
-	this.dataBlock = dataBlock;
-	this.cluster = cluster;
-	this.fromRack = fromRack;
-	this.toRack = toRack;
-	this.fromNode = fromNode;
-	this.toNode = toNode;
-	this.callback = callback;
+            DataBlock dataBlock,
+            Cluster cluster,
+            Rack fromRack,
+            Rack toRack,
+            Node fromNode,
+            Node toNode) {
+        this.dataBlock = dataBlock;
+        this.cluster = cluster;
+        this.fromRack = fromRack;
+        this.toRack = toRack;
+        this.fromNode = fromNode;
+        this.toNode = toNode;
     }
 
     public void run() {
-	final long size = dataBlock.getSize();
+        final long size = dataBlock.getSize();
 
-	fromNode.getDiskResource().consume(this, size);
-	fromRack.getNetworkResource().consume(this, size);
-	if (fromRack.equals(toRack)) {
-		toNode.getDiskResource().consume(this, size);
-	} else {
-		cluster.getNetworkResource().consume(this, size);
-		toRack.getNetworkResource().consume(this, size);
-		toNode.getDiskResource().consume(this, size);
-	}
+        fromNode.getDiskResource().consume(this, size);
+        fromRack.getNetworkResource().consume(this, size);
+        if (fromRack.equals(toRack)) {
+            toNode.getDiskResource().consume(this, size);
+        } else {
+            cluster.getNetworkResource().consume(this, size);
+            toRack.getNetworkResource().consume(this, size);
+            toNode.getDiskResource().consume(this, size);
+        }
     }
-    
+
     @Override
     public String toString() {
-	    return Objects.toStringHelper(getClass()).
-		    add("fromRack", fromRack.getId()).
-		    add("fromNode", fromNode.getId()).
-		    add("toRack", toRack.getId()).
-		    add("toNode", toNode.getId()).
-		    add("dataBlock", dataBlock.getId()).
-		    toString();
+        return Objects.toStringHelper(getClass()).
+                add("fromRack", fromRack.getId()).
+                add("fromNode", fromNode.getId()).
+                add("toRack", toRack.getId()).
+                add("toNode", toNode.getId()).
+                add("dataBlock", dataBlock.getId()).
+                toString();
     }
 }

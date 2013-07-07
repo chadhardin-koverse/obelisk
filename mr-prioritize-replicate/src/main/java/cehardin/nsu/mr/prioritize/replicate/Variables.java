@@ -19,203 +19,204 @@ import java.util.concurrent.TimeUnit;
  * @author Chad
  */
 public class Variables implements Serializable {
-	public static class NodeFailure implements Comparable<NodeFailure> {
-		private final NodeId nodeId;
-		private final long time;
-		private final TimeUnit timeUnit;
 
-		public NodeFailure(NodeId nodeId, long time, TimeUnit timeUnit) {
-			this.nodeId = nodeId;
-			this.time = time;
-			this.timeUnit = timeUnit;
-		}
+    public static class NodeFailure implements Comparable<NodeFailure> {
 
-		public NodeId getNodeId() {
-			return nodeId;
-		}
+        private final NodeId nodeId;
+        private final long time;
+        private final TimeUnit timeUnit;
 
-		public long getTime() {
-			return time;
-		}
+        public NodeFailure(NodeId nodeId, long time, TimeUnit timeUnit) {
+            this.nodeId = nodeId;
+            this.time = time;
+            this.timeUnit = timeUnit;
+        }
 
-		public TimeUnit getTimeUnit() {
-			return timeUnit;
-		}
+        public NodeId getNodeId() {
+            return nodeId;
+        }
 
-		public int compareTo(NodeFailure o) {
-			return time < o.time ? -1 : time > o.time ? 1 : 0; 
-		}
-	}
-	
-	public static class Bandwidth {
-		private final long bytes;
-		private final long time;
-		private final TimeUnit timeUnit;
+        public long getTime() {
+            return time;
+        }
 
-		public Bandwidth(long bytes, long time, TimeUnit timeUnit) {
-			this.bytes = bytes;
-			this.time = time;
-			this.timeUnit = timeUnit;
-		}
+        public TimeUnit getTimeUnit() {
+            return timeUnit;
+        }
 
-		public long getBytes() {
-			return bytes;
-		}
+        public int compareTo(NodeFailure o) {
+            return time < o.time ? -1 : time > o.time ? 1 : 0;
+        }
+    }
 
-		public long getTime() {
-			return time;
-		}
+    public static class Bandwidth {
 
-		public TimeUnit getTimeUnit() {
-			return timeUnit;
-		}
-		
-		public double getBytesPerMs() {
-			final double bytesPerUnit = (double)bytes / (double)time;
-			final double bytesPerMs = bytesPerUnit / timeUnit.toMillis(1);
-			
-			return bytesPerMs;
-		}
-	}
-	
-	public static class MapReduceJob {
-		private final long startTime;
-		private final TimeUnit timeUnit;
-		private final Set<TaskId> taskIds;
-		private final Function<TaskId, DataBlockId> taskIdToDataBlockId;
+        private final long bytes;
+        private final long time;
+        private final TimeUnit timeUnit;
 
-		public MapReduceJob(long startTime, TimeUnit timeUnit, Set<TaskId> taskIds, Function<TaskId, DataBlockId> taskIdToDataBlockId) {
-			this.startTime = startTime;
-			this.timeUnit = timeUnit;
-			this.taskIds = taskIds;
-			this.taskIdToDataBlockId = taskIdToDataBlockId;
-		}
+        public Bandwidth(long bytes, long time, TimeUnit timeUnit) {
+            this.bytes = bytes;
+            this.time = time;
+            this.timeUnit = timeUnit;
+        }
 
-		public long getStartTime() {
-			return startTime;
-		}
+        public long getBytes() {
+            return bytes;
+        }
 
-		public TimeUnit getTimeUnit() {
-			return timeUnit;
-		}
+        public long getTime() {
+            return time;
+        }
 
-		public Set<TaskId> getTaskIds() {
-			return taskIds;
-		}
+        public TimeUnit getTimeUnit() {
+            return timeUnit;
+        }
 
-		public Function<TaskId, DataBlockId> getTaskIdToDataBlockId() {
-			return taskIdToDataBlockId;
-		}
-	}
-	
-	private final Bandwidth diskBandwidth;
-	private final Bandwidth rackBandwidth;
-	private final Bandwidth clusterBandwidth;
-	private final int blockSize;
-	private final int maxConcurrentTasks;
-	private final int maxTasksPerNode;
-	private final SortedSet<NodeFailure> nodeFailures;
-	private final Set<RackId> rackIds;
-	private final Set<NodeId> nodeIds;
-	private final Set<DataBlockId> dataBlockIds;
-	private final Function<NodeId, RackId> nodeIdToRackId;
-	private final Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds;
-	private final TaskNodeAllocator taskNodeAllocator;
-	private final ReplicateTaskScheduler replicateTaskScheduler;
-	private final MapReduceJob mapReduceJob;
-	
-	public Variables(
-		Bandwidth diskBandwidth, 
-		Bandwidth rackBandwidth, 
-		Bandwidth clusterBandwidth, 
-		int blockSize, 
-		int maxConcurrentTasks, 
-		int maxTasksPerNode, 
-		SortedSet<NodeFailure> nodeFailures, 
-		Set<RackId> rackIds, 
-		Set<NodeId> nodeIds, 
-		Set<DataBlockId> dataBlockIds, 
-		Function<NodeId, RackId> nodeIdToRackId, 
-		Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds, 
-		TaskNodeAllocator taskNodeAllocator,
-		ReplicateTaskScheduler replicateTaskScheduler,
-		MapReduceJob mapReduceJob) {
-		this.diskBandwidth = diskBandwidth;
-		this.rackBandwidth = rackBandwidth;
-		this.clusterBandwidth = clusterBandwidth;
-		this.blockSize = blockSize;
-		this.maxConcurrentTasks = maxConcurrentTasks;
-		this.maxTasksPerNode = maxTasksPerNode;
-		this.nodeFailures = nodeFailures;
-		this.rackIds = rackIds;
-		this.nodeIds = nodeIds;
-		this.dataBlockIds = dataBlockIds;
-		this.nodeIdToRackId = nodeIdToRackId;
-		this.dataBlockIdToNodeIds = dataBlockIdToNodeIds;
-		this.taskNodeAllocator = taskNodeAllocator;
-		this.replicateTaskScheduler = replicateTaskScheduler;
-		this.mapReduceJob = mapReduceJob;
-	}
+        public double getBytesPerMs() {
+            final double bytesPerUnit = (double) bytes / (double) time;
+            final double bytesPerMs = bytesPerUnit / timeUnit.toMillis(1);
 
-	public Bandwidth getDiskBandwidth() {
-		return diskBandwidth;
-	}
+            return bytesPerMs;
+        }
+    }
 
-	public Bandwidth getRackBandwidth() {
-		return rackBandwidth;
-	}
+    public static class MapReduceJob {
 
-	public Bandwidth getClusterBandwidth() {
-		return clusterBandwidth;
-	}
+        private final long startTime;
+        private final TimeUnit timeUnit;
+        private final Set<TaskId> taskIds;
+        private final Function<TaskId, DataBlockId> taskIdToDataBlockId;
 
-	public int getBlockSize() {
-		return blockSize;
-	}
+        public MapReduceJob(long startTime, TimeUnit timeUnit, Set<TaskId> taskIds, Function<TaskId, DataBlockId> taskIdToDataBlockId) {
+            this.startTime = startTime;
+            this.timeUnit = timeUnit;
+            this.taskIds = taskIds;
+            this.taskIdToDataBlockId = taskIdToDataBlockId;
+        }
 
-	public int getMaxConcurrentTasks() {
-		return maxConcurrentTasks;
-	}
+        public long getStartTime() {
+            return startTime;
+        }
 
-	public int getMaxTasksPerNode() {
-		return maxTasksPerNode;
-	}
+        public TimeUnit getTimeUnit() {
+            return timeUnit;
+        }
 
-	public SortedSet<NodeFailure> getNodeFailures() {
-		return nodeFailures;
-	}
+        public Set<TaskId> getTaskIds() {
+            return taskIds;
+        }
 
-	public Set<RackId> getRackIds() {
-		return rackIds;
-	}
+        public Function<TaskId, DataBlockId> getTaskIdToDataBlockId() {
+            return taskIdToDataBlockId;
+        }
+    }
+    private final Bandwidth diskBandwidth;
+    private final Bandwidth rackBandwidth;
+    private final Bandwidth clusterBandwidth;
+    private final int blockSize;
+    private final int maxConcurrentTasks;
+    private final int maxTasksPerNode;
+    private final SortedSet<NodeFailure> nodeFailures;
+    private final Set<RackId> rackIds;
+    private final Set<NodeId> nodeIds;
+    private final Set<DataBlockId> dataBlockIds;
+    private final Function<NodeId, RackId> nodeIdToRackId;
+    private final Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds;
+    private final TaskNodeAllocator taskNodeAllocator;
+    private final ReplicateTaskScheduler replicateTaskScheduler;
+    private final MapReduceJob mapReduceJob;
 
-	public Set<NodeId> getNodeIds() {
-		return nodeIds;
-	}
+    public Variables(
+            Bandwidth diskBandwidth,
+            Bandwidth rackBandwidth,
+            Bandwidth clusterBandwidth,
+            int blockSize,
+            int maxConcurrentTasks,
+            int maxTasksPerNode,
+            SortedSet<NodeFailure> nodeFailures,
+            Set<RackId> rackIds,
+            Set<NodeId> nodeIds,
+            Set<DataBlockId> dataBlockIds,
+            Function<NodeId, RackId> nodeIdToRackId,
+            Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds,
+            TaskNodeAllocator taskNodeAllocator,
+            ReplicateTaskScheduler replicateTaskScheduler,
+            MapReduceJob mapReduceJob) {
+        this.diskBandwidth = diskBandwidth;
+        this.rackBandwidth = rackBandwidth;
+        this.clusterBandwidth = clusterBandwidth;
+        this.blockSize = blockSize;
+        this.maxConcurrentTasks = maxConcurrentTasks;
+        this.maxTasksPerNode = maxTasksPerNode;
+        this.nodeFailures = nodeFailures;
+        this.rackIds = rackIds;
+        this.nodeIds = nodeIds;
+        this.dataBlockIds = dataBlockIds;
+        this.nodeIdToRackId = nodeIdToRackId;
+        this.dataBlockIdToNodeIds = dataBlockIdToNodeIds;
+        this.taskNodeAllocator = taskNodeAllocator;
+        this.replicateTaskScheduler = replicateTaskScheduler;
+        this.mapReduceJob = mapReduceJob;
+    }
 
-	public Set<DataBlockId> getDataBlockIds() {
-		return dataBlockIds;
-	}
+    public Bandwidth getDiskBandwidth() {
+        return diskBandwidth;
+    }
 
-	public Function<NodeId, RackId> getNodeIdToRackId() {
-		return nodeIdToRackId;
-	}
+    public Bandwidth getRackBandwidth() {
+        return rackBandwidth;
+    }
 
-	public Function<DataBlockId, Set<NodeId>> getDataBlockIdToNodeIds() {
-		return dataBlockIdToNodeIds;
-	}
+    public Bandwidth getClusterBandwidth() {
+        return clusterBandwidth;
+    }
 
-	public TaskNodeAllocator getTaskNodeAllocator() {
-		return taskNodeAllocator;
-	}
+    public int getBlockSize() {
+        return blockSize;
+    }
 
-	public ReplicateTaskScheduler getReplicateTaskScheduler() {
-		return replicateTaskScheduler;
-	}
+    public int getMaxConcurrentTasks() {
+        return maxConcurrentTasks;
+    }
 
-	public MapReduceJob getMapReduceJob() {
-		return mapReduceJob;
-	}
-	
-	
+    public int getMaxTasksPerNode() {
+        return maxTasksPerNode;
+    }
+
+    public SortedSet<NodeFailure> getNodeFailures() {
+        return nodeFailures;
+    }
+
+    public Set<RackId> getRackIds() {
+        return rackIds;
+    }
+
+    public Set<NodeId> getNodeIds() {
+        return nodeIds;
+    }
+
+    public Set<DataBlockId> getDataBlockIds() {
+        return dataBlockIds;
+    }
+
+    public Function<NodeId, RackId> getNodeIdToRackId() {
+        return nodeIdToRackId;
+    }
+
+    public Function<DataBlockId, Set<NodeId>> getDataBlockIdToNodeIds() {
+        return dataBlockIdToNodeIds;
+    }
+
+    public TaskNodeAllocator getTaskNodeAllocator() {
+        return taskNodeAllocator;
+    }
+
+    public ReplicateTaskScheduler getReplicateTaskScheduler() {
+        return replicateTaskScheduler;
+    }
+
+    public MapReduceJob getMapReduceJob() {
+        return mapReduceJob;
+    }
 }

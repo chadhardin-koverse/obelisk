@@ -15,6 +15,7 @@ import java.util.Set;
  * @author Chad
  */
 public interface ReplicateTaskScheduler {
-	List<ReplicateTask> schedule(
-		Cluster cluster);
+
+    List<ReplicateTask> schedule(
+            Cluster cluster);
 }

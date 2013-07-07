@@ -28,45 +28,45 @@ import java.util.concurrent.TimeUnit;
 public class ClusterBuilder {
 
     public Cluster buildCluster(Variables variables) {
-	final Set<Rack> racks = Sets.newHashSet();
-	final Map<NodeId, Set<DataBlockId>> nodeIdToDataBlockIds = Maps.newHashMap();
-	final Map<RackId, Set<NodeId>> rackIdtoNodeIds = Maps.newHashMap();
-	
-	for(final DataBlockId dataBlockId : variables.getDataBlockIds()) {
-		for(final NodeId nodeId : variables.getDataBlockIdToNodeIds().apply(dataBlockId)) {
-			if(!nodeIdToDataBlockIds.containsKey(nodeId)) {
-				nodeIdToDataBlockIds.put(nodeId, new HashSet<DataBlockId>());
-			}
-			
-			nodeIdToDataBlockIds.get(nodeId).add(dataBlockId);
-		}
-	}
-	
-	for(final NodeId nodeId : variables.getNodeIds()) {
-		final RackId rackId = variables.getNodeIdToRackId().apply(nodeId);
-		if(!rackIdtoNodeIds.containsKey(rackId)) {
-			rackIdtoNodeIds.put(rackId, new HashSet<NodeId>());
-		}
-		
-		rackIdtoNodeIds.get(rackId).add(nodeId);
-	}
-	
-	for(final Map.Entry<RackId, Set<NodeId>> entry : rackIdtoNodeIds.entrySet()) {
-		final RackId rackId = entry.getKey();;
-		final Set<Node> nodes = new HashSet<Node>();
-		
-		for(final NodeId nodeId : entry.getValue()) {
-			final Set<DataBlock> dataBlocks = Sets.newHashSet();
-			
-			for(final DataBlockId dataBlockId : nodeIdToDataBlockIds.get(nodeId)) {
-				dataBlocks.add(new DataBlock(dataBlockId, variables.getBlockSize()));
-			}
-			nodes.add(new Node(nodeId, new Resource(String.format("%s-disk", nodeId),variables.getDiskBandwidth().getBytesPerMs()), dataBlocks));
-		}
-		
-		racks.add(new Rack(nodes, new Resource(String.format("%s-network", rackId),variables.getRackBandwidth().getBytesPerMs()), rackId));
-	}
-	
-	return new Cluster(racks, new Resource(String.format("%s-network", "cluster"),variables.getClusterBandwidth().getBytesPerMs()));
+        final Set<Rack> racks = Sets.newHashSet();
+        final Map<NodeId, Set<DataBlockId>> nodeIdToDataBlockIds = Maps.newHashMap();
+        final Map<RackId, Set<NodeId>> rackIdtoNodeIds = Maps.newHashMap();
+
+        for (final DataBlockId dataBlockId : variables.getDataBlockIds()) {
+            for (final NodeId nodeId : variables.getDataBlockIdToNodeIds().apply(dataBlockId)) {
+                if (!nodeIdToDataBlockIds.containsKey(nodeId)) {
+                    nodeIdToDataBlockIds.put(nodeId, new HashSet<DataBlockId>());
+                }
+
+                nodeIdToDataBlockIds.get(nodeId).add(dataBlockId);
+            }
+        }
+
+        for (final NodeId nodeId : variables.getNodeIds()) {
+            final RackId rackId = variables.getNodeIdToRackId().apply(nodeId);
+            if (!rackIdtoNodeIds.containsKey(rackId)) {
+                rackIdtoNodeIds.put(rackId, new HashSet<NodeId>());
+            }
+
+            rackIdtoNodeIds.get(rackId).add(nodeId);
+        }
+
+        for (final Map.Entry<RackId, Set<NodeId>> entry : rackIdtoNodeIds.entrySet()) {
+            final RackId rackId = entry.getKey();;
+            final Set<Node> nodes = new HashSet<Node>();
+
+            for (final NodeId nodeId : entry.getValue()) {
+                final Set<DataBlock> dataBlocks = Sets.newHashSet();
+
+                for (final DataBlockId dataBlockId : nodeIdToDataBlockIds.get(nodeId)) {
+                    dataBlocks.add(new DataBlock(dataBlockId, variables.getBlockSize()));
+                }
+                nodes.add(new Node(nodeId, new Resource(String.format("%s-disk", nodeId), variables.getDiskBandwidth().getBytesPerMs()), dataBlocks));
+            }
+
+            racks.add(new Rack(nodes, new Resource(String.format("%s-network", rackId), variables.getRackBandwidth().getBytesPerMs()), rackId));
+        }
+
+        return new Cluster(racks, new Resource(String.format("%s-network", "cluster"), variables.getClusterBandwidth().getBytesPerMs()));
     }
 }

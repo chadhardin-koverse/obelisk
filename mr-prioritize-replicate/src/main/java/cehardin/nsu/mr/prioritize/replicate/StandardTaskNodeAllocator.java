@@ -20,33 +20,33 @@ import java.util.Set;
  */
 public class StandardTaskNodeAllocator implements TaskNodeAllocator {
 
-	public Map<TaskId, NodeId> allocate(
-		Set<TaskId> taskIds,
-		Set<NodeId> nodeIds,
-		Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds, 
-		Function<TaskId, DataBlockId> taskIdToDataBlockId) {
-		
-		final Map<TaskId, NodeId> schedule = Maps.newHashMap();
-		final Set<NodeId> availableNodes = Sets.newHashSet();
-		
-		for(final TaskId taskId : taskIds) {
-			final DataBlockId dataBlockId = taskIdToDataBlockId.apply(taskId);
-			final Set<NodeId> dataBlockNodeIds = dataBlockIdToNodeIds.apply(dataBlockId);
-			final Set<NodeId> possibleNodeIds;
-			
-			if(availableNodes.isEmpty()) {
-				availableNodes.addAll(nodeIds);
-			}
-			
-			possibleNodeIds = Sets.intersection(availableNodes, dataBlockNodeIds);
-			
-			if(!possibleNodeIds.isEmpty()) {
-				final NodeId selection = possibleNodeIds.iterator().next();
-				schedule.put(taskId, selection);
-				availableNodes.remove(selection);
-			}
-		}
-		
-		return Collections.unmodifiableMap(schedule);
-	}
+    public Map<TaskId, NodeId> allocate(
+            Set<TaskId> taskIds,
+            Set<NodeId> nodeIds,
+            Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds,
+            Function<TaskId, DataBlockId> taskIdToDataBlockId) {
+
+        final Map<TaskId, NodeId> schedule = Maps.newHashMap();
+        final Set<NodeId> availableNodes = Sets.newHashSet();
+
+        for (final TaskId taskId : taskIds) {
+            final DataBlockId dataBlockId = taskIdToDataBlockId.apply(taskId);
+            final Set<NodeId> dataBlockNodeIds = dataBlockIdToNodeIds.apply(dataBlockId);
+            final Set<NodeId> possibleNodeIds;
+
+            if (availableNodes.isEmpty()) {
+                availableNodes.addAll(nodeIds);
+            }
+
+            possibleNodeIds = Sets.intersection(availableNodes, dataBlockNodeIds);
+
+            if (!possibleNodeIds.isEmpty()) {
+                final NodeId selection = possibleNodeIds.iterator().next();
+                schedule.put(taskId, selection);
+                availableNodes.remove(selection);
+            }
+        }
+
+        return Collections.unmodifiableMap(schedule);
+    }
 }

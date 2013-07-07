@@ -28,151 +28,151 @@ import java.util.SortedMap;
  */
 public class Cluster {
 
-	private final Set<Rack> racks;
-	private final Resource networkResource;
+    private final Set<Rack> racks;
+    private final Resource networkResource;
 
-	public Cluster(Set<Rack> racks, Resource networkResource) {
-		this.racks = racks;
-		this.networkResource = networkResource;
-	}
+    public Cluster(Set<Rack> racks, Resource networkResource) {
+        this.racks = racks;
+        this.networkResource = networkResource;
+    }
 
-	public Set<Rack> getRacks() {
-		return racks;
-	}
+    public Set<Rack> getRacks() {
+        return racks;
+    }
 
-	public Resource getNetworkResource() {
-		return networkResource;
-	}
+    public Resource getNetworkResource() {
+        return networkResource;
+    }
 
-	public Set<DataBlock> getDataBlocks() {
-		final Set<DataBlock> dataBlocks = new HashSet<DataBlock>();
+    public Set<DataBlock> getDataBlocks() {
+        final Set<DataBlock> dataBlocks = new HashSet<DataBlock>();
 
-		for (final Rack rack : getRacks()) {
-			dataBlocks.addAll(rack.getDataBlocks());
-		}
+        for (final Rack rack : getRacks()) {
+            dataBlocks.addAll(rack.getDataBlocks());
+        }
 
-		return dataBlocks;
-	}
+        return dataBlocks;
+    }
 
-	public Map<DataBlockId, Set<DataBlock>> getDataBlocksById() {
-		final Map<DataBlockId, Set<DataBlock>> blocksById = Maps.newHashMap();
+    public Map<DataBlockId, Set<DataBlock>> getDataBlocksById() {
+        final Map<DataBlockId, Set<DataBlock>> blocksById = Maps.newHashMap();
 
-		for (final Rack rack : getRacks()) {
-			for (final Map.Entry<DataBlockId, Set<DataBlock>> nodeBlocksById : rack.getDataBlocksById().entrySet()) {
-				final DataBlockId id = nodeBlocksById.getKey();
-				final Set<DataBlock> dataBlocks = nodeBlocksById.getValue();
+        for (final Rack rack : getRacks()) {
+            for (final Map.Entry<DataBlockId, Set<DataBlock>> nodeBlocksById : rack.getDataBlocksById().entrySet()) {
+                final DataBlockId id = nodeBlocksById.getKey();
+                final Set<DataBlock> dataBlocks = nodeBlocksById.getValue();
 
-				if (blocksById.containsKey(id)) {
-					blocksById.get(id).addAll(dataBlocks);
-				} else {
-					blocksById.put(id, dataBlocks);
-				}
-			}
-		}
+                if (blocksById.containsKey(id)) {
+                    blocksById.get(id).addAll(dataBlocks);
+                } else {
+                    blocksById.put(id, dataBlocks);
+                }
+            }
+        }
 
-		return Collections.unmodifiableMap(blocksById);
-	}
+        return Collections.unmodifiableMap(blocksById);
+    }
 
-	public Map<DataBlockId, Integer> getDataBlockReplicationCount() {
-		final Map<DataBlockId, Integer> result = Maps.newHashMap();
+    public Map<DataBlockId, Integer> getDataBlockReplicationCount() {
+        final Map<DataBlockId, Integer> result = Maps.newHashMap();
 
-		for (final Rack rack : getRacks()) {
-			for (final Map.Entry<DataBlockId, Integer> entry : rack.getDataBlockReplicationCount().entrySet()) {
-				final DataBlockId dataBlockId = entry.getKey();
-				final Integer count = entry.getValue();
+        for (final Rack rack : getRacks()) {
+            for (final Map.Entry<DataBlockId, Integer> entry : rack.getDataBlockReplicationCount().entrySet()) {
+                final DataBlockId dataBlockId = entry.getKey();
+                final Integer count = entry.getValue();
 
-				if (result.containsKey(dataBlockId)) {
-					final Integer currentCount = result.get(dataBlockId);
-					result.put(dataBlockId, currentCount + count);
-				} else {
-					result.put(dataBlockId, count);
-				}
-			}
-		}
+                if (result.containsKey(dataBlockId)) {
+                    final Integer currentCount = result.get(dataBlockId);
+                    result.put(dataBlockId, currentCount + count);
+                } else {
+                    result.put(dataBlockId, count);
+                }
+            }
+        }
 
-		return Collections.unmodifiableMap(result);
-	}
+        return Collections.unmodifiableMap(result);
+    }
 
-	public SortedMap<Integer, Set<DataBlockId>> getReplicationCounts() {
-		final SortedMap<Integer, Set<DataBlockId>> result = Maps.newTreeMap();
-		
-		for(final Map.Entry<DataBlockId, Integer> entry : getDataBlockReplicationCount().entrySet()) {
-			final DataBlockId dataBlockId = entry.getKey();
-			final int count = entry.getValue();
+    public SortedMap<Integer, Set<DataBlockId>> getReplicationCounts() {
+        final SortedMap<Integer, Set<DataBlockId>> result = Maps.newTreeMap();
 
-			if(!result.containsKey(count)) {
-			    result.put(count, new HashSet<DataBlockId>());
-			}
-				
-			result.get(count).add(dataBlockId);
-		}
+        for (final Map.Entry<DataBlockId, Integer> entry : getDataBlockReplicationCount().entrySet()) {
+            final DataBlockId dataBlockId = entry.getKey();
+            final int count = entry.getValue();
 
-		return Collections.unmodifiableSortedMap(result);
-	}
-	
-	public Map<NodeId, Node> getNodeMap() {
-		final Map<NodeId, Node> nodeMap = Maps.newHashMap();
-		
-		for(final Rack rack : getRacks()) {
-			nodeMap.putAll(rack.getNodeMap());
-		}
-		
-		return Collections.unmodifiableMap(nodeMap);
-	}
+            if (!result.containsKey(count)) {
+                result.put(count, new HashSet<DataBlockId>());
+            }
 
-	public Rack pickRandomRack() {
-		final Random random = new Random();
-		final int offset = random.nextInt(getRacks().size());
-		final Iterator<Rack> rackIterator = getRacks().iterator();
+            result.get(count).add(dataBlockId);
+        }
 
-		for (int i = 0; i < offset; i++) {
-			rackIterator.next();
-		}
+        return Collections.unmodifiableSortedMap(result);
+    }
 
-		return rackIterator.next();
-	}
+    public Map<NodeId, Node> getNodeMap() {
+        final Map<NodeId, Node> nodeMap = Maps.newHashMap();
 
-	public Rack pickRandomNodeNot(Rack rack) {
-		Rack randomRack;
-		do {
-			randomRack = pickRandomRack();
-		} while (randomRack == rack);
+        for (final Rack rack : getRacks()) {
+            nodeMap.putAll(rack.getNodeMap());
+        }
 
-		return randomRack;
-	}
+        return Collections.unmodifiableMap(nodeMap);
+    }
 
-	public Rack findRackOfNode(final Node node) {
-		return Iterables.find(getRacks(), new Predicate<Rack>() {
-			public boolean apply(Rack rack) {
-				return rack.getNodes().contains(node);
-			}
-		});
-	}
+    public Rack pickRandomRack() {
+        final Random random = new Random();
+        final int offset = random.nextInt(getRacks().size());
+        final Iterator<Rack> rackIterator = getRacks().iterator();
 
-	public Set<Node> findNodesOfDataBlock(DataBlockId dataBlockId) {
-		final Set<Node> found = new HashSet<Node>();
+        for (int i = 0; i < offset; i++) {
+            rackIterator.next();
+        }
 
-		for (final Rack rack : racks) {
-			found.addAll(rack.findNodesOfDataBlockId(dataBlockId));
-		}
+        return rackIterator.next();
+    }
 
-		return Collections.unmodifiableSet(found);
-	}
+    public Rack pickRandomNodeNot(Rack rack) {
+        Rack randomRack;
+        do {
+            randomRack = pickRandomRack();
+        } while (randomRack == rack);
 
-	public Set<Rack> findRacksOfDataBlock(final DataBlockId dataBlockId) {
-		return Collections.unmodifiableSet(
-			Sets.filter(getRacks(), new Predicate<Rack>() {
-			public boolean apply(Rack rack) {
-				return !rack.findNodesOfDataBlockId(dataBlockId).isEmpty();
-			}
-		}));
-	}
-	
-	@Override
-	public String toString() {
-	    return Objects.toStringHelper(getClass()).
-		    add("racks", racks).
-		    add("networkResource", networkResource).
-		    toString();
-	}
+        return randomRack;
+    }
+
+    public Rack findRackOfNode(final Node node) {
+        return Iterables.find(getRacks(), new Predicate<Rack>() {
+            public boolean apply(Rack rack) {
+                return rack.getNodes().contains(node);
+            }
+        });
+    }
+
+    public Set<Node> findNodesOfDataBlock(DataBlockId dataBlockId) {
+        final Set<Node> found = new HashSet<Node>();
+
+        for (final Rack rack : racks) {
+            found.addAll(rack.findNodesOfDataBlockId(dataBlockId));
+        }
+
+        return Collections.unmodifiableSet(found);
+    }
+
+    public Set<Rack> findRacksOfDataBlock(final DataBlockId dataBlockId) {
+        return Collections.unmodifiableSet(
+                Sets.filter(getRacks(), new Predicate<Rack>() {
+            public boolean apply(Rack rack) {
+                return !rack.findNodesOfDataBlockId(dataBlockId).isEmpty();
+            }
+        }));
+    }
+
+    @Override
+    public String toString() {
+        return Objects.toStringHelper(getClass()).
+                add("racks", racks).
+                add("networkResource", networkResource).
+                toString();
+    }
 }

@@ -18,9 +18,10 @@ import java.util.Set;
  * @author Chad
  */
 public interface TaskNodeAllocator {
-	Map<TaskId, NodeId> allocate(
-		Set<TaskId> taskIds,
-		Set<NodeId> nodeIds,
-		Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds,
-		Function<TaskId, DataBlockId> taskIdToDataBlockId);
+
+    Map<TaskId, NodeId> allocate(
+            Set<TaskId> taskIds,
+            Set<NodeId> nodeIds,
+            Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds,
+            Function<TaskId, DataBlockId> taskIdToDataBlockId);
 }

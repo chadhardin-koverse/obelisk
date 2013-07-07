@@ -11,5 +11,6 @@ import cehardin.nsu.mr.prioritize.replicate.id.Id;
  * @author Chad
  */
 public interface Hardware<ID extends Id> {
-	ID getId();
+
+    ID getId();
 }

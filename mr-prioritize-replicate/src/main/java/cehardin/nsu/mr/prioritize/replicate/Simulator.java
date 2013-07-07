@@ -48,118 +48,117 @@ import java.util.logging.Logger;
  * @author Chad
  */
 public class Simulator implements Callable<Object> {
-	private final Logger logger = Logger.getLogger("Simulator");
-	private final ExecutorService executorService;
-	private final Variables variables;
-	private final Cluster cluster;
-	
-	public Simulator(
-		final Variables variables,
-		final ExecutorService executorService) {
-		final ClusterBuilder clusterBuilder = new ClusterBuilder();
-		this.variables = variables;
-		this.executorService = executorService;
-		this.cluster = clusterBuilder.buildCluster(variables);
-	}
-	
-	public Object call() throws Exception {
-		final List<Simulated> simulateds = Lists.newArrayList();
-		final List<Task> tasks = Lists.newLinkedList();
-		final double totalTime = 1000000;
-		final double timeStep = 1000;
-		final AtomicInteger numRunningTasks = new AtomicInteger(0);
-		final AtomicBoolean mapReduceJobStarted = new AtomicBoolean(false);
-		double currentTime = 0;
-	
-		logger.info("Starting");
-		logger.info("Cluster: "+cluster);
-		simulateds.add(cluster.getNetworkResource());
-		
-		for(final Rack rack : cluster.getRacks()) {
-			simulateds.add(rack.getNetworkResource());
-			for(final Node node : rack.getNodes()) {
-				simulateds.add(node.getDiskResource());
-			}
-		}
-		
-		while(currentTime < totalTime) {
-			final double availableStepTime = (currentTime + timeStep) > totalTime ? totalTime - currentTime : timeStep;
-			final Collection<Future<Double>> futures = new ArrayList<Future<Double>>(simulateds.size());
-			
-			if(!mapReduceJobStarted.get()) {
-				final Variables.MapReduceJob mapReduceJob = variables.getMapReduceJob();
-				final long mapReduceJobStartTime = mapReduceJob.getTimeUnit().toMillis(mapReduceJob.getStartTime());
-				
-				if( mapReduceJobStartTime >= currentTime) {
-					final TaskNodeAllocator allocator = variables.getTaskNodeAllocator();
-					final Map<TaskId, NodeId> taskToNode;
-					
-					mapReduceJobStarted.set(true);
-					
-					taskToNode = allocator.allocate(
-						mapReduceJob.getTaskIds(), 
-						variables.getNodeIds(), 
-						variables.getDataBlockIdToNodeIds(), 
-						mapReduceJob.getTaskIdToDataBlockId());
-					
-					for(final Map.Entry<TaskId, NodeId> entry : taskToNode.entrySet()) {
-						final TaskId taskId = entry.getKey();
-						final NodeId nodeId = entry.getValue();
-						final DataBlockId dataBlockId = mapReduceJob.getTaskIdToDataBlockId().apply(taskId);
-						final MapReduceTask mapReduceTask = new MapReduceTask(
-							cluster.getNodeMap().get(nodeId), 
-							cluster.getNodeMap().get(nodeId).getDataBlockById().get(dataBlockId));
-						
-						tasks.add(mapReduceTask);
-					}
-				}
-			}
-			
-			if(!Iterables.contains(tasks, Predicates.instanceOf(ReplicateTask.class))) {
-				final ReplicateTaskScheduler replicateTaskScheduler = variables.getReplicateTaskScheduler();
-				tasks.addAll(replicateTaskScheduler.schedule(cluster));
-			}
-			
-			Collections.shuffle(tasks);
-			
-			if(!tasks.isEmpty() && numRunningTasks.get() < variables.getMaxConcurrentTasks()) {
-				final Task task = tasks.remove(0);
-				final Future<?> future = executorService.submit(new Runnable() {
 
-					public void run() {
-						logger.log(Level.INFO, "Task Started: {0}", task);
-						task.run();
-					}
-				});
-				final ListenableFuture<?> listenableFuture = JdkFutureAdapters.listenInPoolThread(future);
-				numRunningTasks.incrementAndGet();
-				Futures.addCallback(listenableFuture, new FutureCallback<Object>() {
+    private final Logger logger = Logger.getLogger("Simulator");
+    private final ExecutorService executorService;
+    private final Variables variables;
+    private final Cluster cluster;
 
-					public void onSuccess(Object result) {
-						logger.log(Level.INFO, "Task Finished: {0}", task);
-						numRunningTasks.decrementAndGet();
-					}
+    public Simulator(
+            final Variables variables,
+            final ExecutorService executorService) {
+        final ClusterBuilder clusterBuilder = new ClusterBuilder();
+        this.variables = variables;
+        this.executorService = executorService;
+        this.cluster = clusterBuilder.buildCluster(variables);
+    }
 
-					public void onFailure(Throwable t) {
-						logger.log(Level.WARNING, "Task Failed: "+task, t);
-						numRunningTasks.decrementAndGet();
-					}
-				});
-			}
-			
-			for(final Simulated simulated : simulateds) {
-				futures.add(executorService.submit(new Callable<Double>() {
-					public Double call() throws Exception {
-						return simulated.execute(availableStepTime);
-					}
-				}));
-			}
-			
-			for(final Future<Double> future : futures) {
-				currentTime+=future.get();
-			}
-		}
-		
-		return currentTime;	
-	}
+    public Object call() throws Exception {
+        final List<Simulated> simulateds = Lists.newArrayList();
+        final List<Task> tasks = Lists.newLinkedList();
+        final double totalTime = 1000000;
+        final double timeStep = 1000;
+        final AtomicInteger numRunningTasks = new AtomicInteger(0);
+        final AtomicBoolean mapReduceJobStarted = new AtomicBoolean(false);
+        double currentTime = 0;
+
+        logger.info("Starting");
+        logger.info("Cluster: " + cluster);
+        simulateds.add(cluster.getNetworkResource());
+
+        for (final Rack rack : cluster.getRacks()) {
+            simulateds.add(rack.getNetworkResource());
+            for (final Node node : rack.getNodes()) {
+                simulateds.add(node.getDiskResource());
+            }
+        }
+
+        while (currentTime < totalTime) {
+            final double availableStepTime = (currentTime + timeStep) > totalTime ? totalTime - currentTime : timeStep;
+            final Collection<Future<Double>> futures = new ArrayList<Future<Double>>(simulateds.size());
+
+            if (!mapReduceJobStarted.get()) {
+                final Variables.MapReduceJob mapReduceJob = variables.getMapReduceJob();
+                final long mapReduceJobStartTime = mapReduceJob.getTimeUnit().toMillis(mapReduceJob.getStartTime());
+
+                if (mapReduceJobStartTime >= currentTime) {
+                    final TaskNodeAllocator allocator = variables.getTaskNodeAllocator();
+                    final Map<TaskId, NodeId> taskToNode;
+
+                    mapReduceJobStarted.set(true);
+
+                    taskToNode = allocator.allocate(
+                            mapReduceJob.getTaskIds(),
+                            variables.getNodeIds(),
+                            variables.getDataBlockIdToNodeIds(),
+                            mapReduceJob.getTaskIdToDataBlockId());
+
+                    for (final Map.Entry<TaskId, NodeId> entry : taskToNode.entrySet()) {
+                        final TaskId taskId = entry.getKey();
+                        final NodeId nodeId = entry.getValue();
+                        final DataBlockId dataBlockId = mapReduceJob.getTaskIdToDataBlockId().apply(taskId);
+                        final MapReduceTask mapReduceTask = new MapReduceTask(
+                                cluster.getNodeMap().get(nodeId),
+                                cluster.getNodeMap().get(nodeId).getDataBlockById().get(dataBlockId));
+
+                        tasks.add(mapReduceTask);
+                    }
+                }
+            }
+
+            if (!Iterables.contains(tasks, Predicates.instanceOf(ReplicateTask.class))) {
+                final ReplicateTaskScheduler replicateTaskScheduler = variables.getReplicateTaskScheduler();
+                tasks.addAll(replicateTaskScheduler.schedule(cluster));
+            }
+
+            Collections.shuffle(tasks);
+
+            if (!tasks.isEmpty() && numRunningTasks.get() < variables.getMaxConcurrentTasks()) {
+                final Task task = tasks.remove(0);
+                final Future<?> future = executorService.submit(new Runnable() {
+                    public void run() {
+                        logger.log(Level.INFO, "Task Started: {0}", task);
+                        task.run();
+                    }
+                });
+                final ListenableFuture<?> listenableFuture = JdkFutureAdapters.listenInPoolThread(future);
+                numRunningTasks.incrementAndGet();
+                Futures.addCallback(listenableFuture, new FutureCallback<Object>() {
+                    public void onSuccess(Object result) {
+                        logger.log(Level.INFO, "Task Finished: {0}", task);
+                        numRunningTasks.decrementAndGet();
+                    }
+
+                    public void onFailure(Throwable t) {
+                        logger.log(Level.WARNING, "Task Failed: " + task, t);
+                        numRunningTasks.decrementAndGet();
+                    }
+                });
+            }
+
+            for (final Simulated simulated : simulateds) {
+                futures.add(executorService.submit(new Callable<Double>() {
+                    public Double call() throws Exception {
+                        return simulated.execute(availableStepTime);
+                    }
+                }));
+            }
+
+            for (final Future<Double> future : futures) {
+                currentTime += future.get();
+            }
+        }
+
+        return currentTime;
+    }
 }
