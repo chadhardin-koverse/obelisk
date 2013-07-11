@@ -1,27 +1,15 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package cehardin.nsu.mr.prioritize.replicate;
 
+import static com.google.common.collect.Lists.newArrayList;
+import static java.util.Collections.unmodifiableList;
 import cehardin.nsu.mr.prioritize.replicate.hardware.Cluster;
 import cehardin.nsu.mr.prioritize.replicate.hardware.Node;
 import cehardin.nsu.mr.prioritize.replicate.hardware.Rack;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask;
-import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.logging.Logger;
 
 /**
@@ -36,7 +24,7 @@ public class StandardReplicateTaskScheduler implements ReplicateTaskScheduler {
     }
 
     public List<ReplicateTask> schedule(Cluster cluster) {
-        final List<ReplicateTask> tasks = Lists.newArrayList();
+        final List<ReplicateTask> tasks = newArrayList();
 
         for (final Map.Entry<Integer, Set<DataBlockId>> countEntry : cluster.getReplicationCounts().entrySet()) {
             final int count = countEntry.getKey();
@@ -61,11 +49,11 @@ public class StandardReplicateTaskScheduler implements ReplicateTaskScheduler {
 
                     toNode = toRack.pickRandomNode();
 
-                    tasks.add(new ReplicateTask(dataBlock, cluster, fromRack, toRack, fromNode, toNode, null));
+                    tasks.add(new ReplicateTask(dataBlock, cluster, fromRack, toRack, fromNode, toNode));
                 }
             }
         }
 
-        return Collections.unmodifiableList(tasks);
+        return unmodifiableList(tasks);
     }
 }

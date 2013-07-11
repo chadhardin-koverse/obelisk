@@ -19,10 +19,10 @@ public final class MapReduceTask implements Task {
         this.dataBlock = dataBlock;
     }
 
-    public void run() {
+    public void run(Runnable callback) {
         Preconditions.checkState(node.getDataBlocks().contains(dataBlock));
 
-        node.getDiskResource().consume(this, dataBlock.getSize());
+        node.getDiskResource().consume(dataBlock.getSize(), callback);
     }
 
     @Override

@@ -1,21 +1,16 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package cehardin.nsu.mr.prioritize.replicate;
 
-import cehardin.nsu.mr.prioritize.replicate.task.Task;
+import com.google.common.base.Objects;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.logging.Logger;
 
 /**
  *
  * @author Chad
  */
-public class Resource implements Simulated {
+public class Resource {
 
     private final Logger logger;
     private final double capacityInMs;
@@ -26,6 +21,11 @@ public class Resource implements Simulated {
         logger = Logger.getLogger("Resource (" + name + ")");
     }
 
+    /**
+     *
+     * @param availableTimeInMs The amount of time available in ms
+     * @return Time used (ms)
+     */
     public double execute(final double timeInMs) {
         final Iterator<Reservation> reservationIterator = reservations.iterator();
         double timeUsed = 0;
@@ -41,10 +41,11 @@ public class Resource implements Simulated {
 
             timeUsed += (capacityUsed / capacityInMs);
 
-            logger.info(String.format("Used %.2f bytes in %,dms: %s", capacityUsed, (long) timeUsed, reservation.getTask()));
+            logger.info(String.format("Used %.2f bytes in %,dms: %s", capacityUsed, (long) timeUsed, reservation));
 
             if (reservation.isDone()) {
-                logger.info(String.format("Reservation of %,d bytes fot task is complete: %s", (long) reservation.getNeeded(), reservation.getTask()));
+                reservation.getCallback().run();
+                logger.info(String.format("Reservation is complete: %s", reservation));
                 reservationIterator.remove();
             }
         }
@@ -52,36 +53,25 @@ public class Resource implements Simulated {
         return timeUsed;
     }
 
-    public void consume(final Task task, final double amount) {
-        final Reservation reservation = new Reservation(task, amount);
+    public void consume(final double amount, final Runnable callback) {
+        final Reservation reservation = new Reservation(callback, amount);
         reservations.add(reservation);
-        reservation.waitTillDone();
     }
 
     private static class Reservation {
 
-        private final Task task;
+        private final Runnable callback;
         private final double needed;
-        private final CountDownLatch completionLatch;
         private double used;
 
-        public Reservation(final Task task, final double needed) {
-            this.task = task;
+        public Reservation(final Runnable callback, final double needed) {
+            this.callback = callback;
             this.needed = needed;
             this.used = 0;
-            this.completionLatch = new CountDownLatch(1);
         }
 
-        public Task getTask() {
-            return task;
-        }
-
-        public void waitTillDone() {
-            try {
-                completionLatch.await();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+        public Runnable getCallback() {
+            return callback;
         }
 
         public double getNeeded() {
@@ -105,11 +95,16 @@ public class Resource implements Simulated {
 
             used += taken;
 
-            if (isDone()) {
-                completionLatch.countDown();
-            }
-
             return taken;
+        }
+        
+        @Override
+        public String toString() {
+            return Objects.toStringHelper(getClass()).
+                    add("needed", needed).
+                    add("used", used).
+                    add("callback", callback).
+                    toString();
         }
     }
 }

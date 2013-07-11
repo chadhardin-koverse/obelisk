@@ -1,13 +1,7 @@
-
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package cehardin.nsu.mr.prioritize.replicate;
 
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
-import cehardin.nsu.mr.prioritize.replicate.id.RackId;
 import cehardin.nsu.mr.prioritize.replicate.id.TaskId;
 import com.google.common.base.Function;
 import java.util.Map;

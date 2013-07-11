@@ -1,16 +1,14 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package cehardin.nsu.mr.prioritize.replicate;
+
+import static com.google.common.collect.Maps.newHashMap;
+import static com.google.common.collect.Sets.newHashSet;
+import static com.google.common.collect.Sets.intersection;
+import static java.util.Collections.unmodifiableMap;
 
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import cehardin.nsu.mr.prioritize.replicate.id.TaskId;
 import com.google.common.base.Function;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -26,8 +24,8 @@ public class StandardTaskNodeAllocator implements TaskNodeAllocator {
             Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds,
             Function<TaskId, DataBlockId> taskIdToDataBlockId) {
 
-        final Map<TaskId, NodeId> schedule = Maps.newHashMap();
-        final Set<NodeId> availableNodes = Sets.newHashSet();
+        final Map<TaskId, NodeId> schedule = newHashMap();
+        final Set<NodeId> availableNodes = newHashSet();
 
         for (final TaskId taskId : taskIds) {
             final DataBlockId dataBlockId = taskIdToDataBlockId.apply(taskId);
@@ -38,7 +36,7 @@ public class StandardTaskNodeAllocator implements TaskNodeAllocator {
                 availableNodes.addAll(nodeIds);
             }
 
-            possibleNodeIds = Sets.intersection(availableNodes, dataBlockNodeIds);
+            possibleNodeIds = intersection(availableNodes, dataBlockNodeIds);
 
             if (!possibleNodeIds.isEmpty()) {
                 final NodeId selection = possibleNodeIds.iterator().next();
@@ -47,6 +45,6 @@ public class StandardTaskNodeAllocator implements TaskNodeAllocator {
             }
         }
 
-        return Collections.unmodifiableMap(schedule);
+        return unmodifiableMap(schedule);
     }
 }

@@ -1,18 +1,14 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package cehardin.nsu.mr.prioritize.replicate;
+
+import static com.google.common.collect.Lists.newArrayList;
+import static com.google.common.collect.Maps.newHashMap;
+import static com.google.common.collect.Maps.newTreeMap;
 
 import cehardin.nsu.mr.prioritize.replicate.hardware.Cluster;
 import cehardin.nsu.mr.prioritize.replicate.hardware.Node;
 import cehardin.nsu.mr.prioritize.replicate.hardware.Rack;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask;
-import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -33,8 +29,8 @@ public class HotDataBlockReplicateTaskScheduler implements ReplicateTaskSchedule
     final Map<DataBlockId, Double> dataBlockIdToTemp;
 
     public HotDataBlockReplicateTaskScheduler(Map<DataBlockId, Double> dataBlockIdToTemp) {
-        this.dataBlockIdToTemp = Maps.newHashMap(dataBlockIdToTemp);
-        this.tempToDataBlockIds = Maps.newTreeMap();
+        this.dataBlockIdToTemp = newHashMap(dataBlockIdToTemp);
+        this.tempToDataBlockIds = newTreeMap();
 
         for (final Map.Entry<DataBlockId, Double> entry : dataBlockIdToTemp.entrySet()) {
             final DataBlockId dataBlockId = entry.getKey();
@@ -49,7 +45,7 @@ public class HotDataBlockReplicateTaskScheduler implements ReplicateTaskSchedule
     }
 
     public List<ReplicateTask> schedule(Cluster cluster) {
-        final List<ReplicateTask> tasks = Lists.newArrayList();
+        final List<ReplicateTask> tasks = newArrayList();
 
         for (final Map.Entry<Integer, Set<DataBlockId>> countEntry : cluster.getReplicationCounts().entrySet()) {
             final int count = countEntry.getKey();
@@ -80,7 +76,7 @@ public class HotDataBlockReplicateTaskScheduler implements ReplicateTaskSchedule
 
                 toNode = toRack.pickRandomNode();
 
-                tasks.add(new ReplicateTask(dataBlock, cluster, fromRack, toRack, fromNode, toNode, null));
+                tasks.add(new ReplicateTask(dataBlock, cluster, fromRack, toRack, fromNode, toNode));
             }
         }
 

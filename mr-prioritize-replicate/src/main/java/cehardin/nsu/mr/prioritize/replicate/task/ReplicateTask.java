@@ -34,18 +34,40 @@ public class ReplicateTask implements Task {
         this.toNode = toNode;
     }
 
-    public void run() {
+    public void run(final Runnable callback) {
         final long size = dataBlock.getSize();
 
-        fromNode.getDiskResource().consume(this, size);
-        fromRack.getNetworkResource().consume(this, size);
-        if (fromRack.equals(toRack)) {
-            toNode.getDiskResource().consume(this, size);
-        } else {
-            cluster.getNetworkResource().consume(this, size);
-            toRack.getNetworkResource().consume(this, size);
-            toNode.getDiskResource().consume(this, size);
-        }
+        fromNode.getDiskResource().consume(size, new Runnable() {
+            public void run() {
+                fromRack.getNetworkResource().consume(size, new Runnable() {
+                    public void run() {
+                        if (fromRack.equals(toRack)) {
+                            toNode.getDiskResource().consume(size, new Runnable() {
+                                public void run() {
+                                    toNode.getDataBlocks().add(dataBlock);
+                                    callback.run();
+                                }
+                            });
+                        } else {
+                            cluster.getNetworkResource().consume(size, new Runnable() {
+                                public void run() {
+                                    toRack.getNetworkResource().consume(size, new Runnable() {
+                                        public void run() {
+                                            toNode.getDiskResource().consume(size, new Runnable() {
+                                                public void run() {
+                                                    toNode.getDataBlocks().add(dataBlock);
+                                                    callback.run();
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+        });
     }
 
     @Override

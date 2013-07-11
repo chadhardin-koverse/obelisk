@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package cehardin.nsu.mr.prioritize.replicate.hardware;
 
 import static com.google.common.collect.Iterables.transform;
@@ -10,6 +6,7 @@ import static com.google.common.collect.Maps.uniqueIndex;
 import static com.google.common.collect.Maps.newHashMap;
 import static com.google.common.collect.Maps.newTreeMap;
 import static cehardin.nsu.mr.prioritize.replicate.hardware.Node.extractDataBlocksFromNode;
+import static cehardin.nsu.mr.prioritize.replicate.hardware.Node.nodeContainsDataBlock;
 import static com.google.common.collect.Sets.newHashSet;
 import static com.google.common.collect.Sets.filter;
 import static java.util.Collections.unmodifiableMap;
@@ -21,6 +18,7 @@ import cehardin.nsu.mr.prioritize.replicate.Resource;
 import cehardin.nsu.mr.prioritize.replicate.id.RackId;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
+import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import java.util.HashSet;
@@ -36,7 +34,34 @@ import java.util.logging.Logger;
  * @author Chad
  */
 public class Rack extends AbstractHardware<RackId> {
+    private static class ExtractDataBlocksFromRack implements Function<Rack, Set<DataBlock>> {
+        public Set<DataBlock> apply(Rack rack) {
+            return rack.getDataBlocks();
+        }
+    }
+    
+    private static class RackContainsNode implements Predicate<Rack> {
+        private final NodeId nodeId;
 
+        public RackContainsNode(NodeId nodeId) {
+            this.nodeId = nodeId;
+        }
+
+        public boolean apply(Rack rack) {
+            return rack.getNodesById().containsKey(nodeId);
+        }   
+    }
+    
+    private static final Function<Rack, Set<DataBlock>> ExtractDataBlocksFromRack = new ExtractDataBlocksFromRack();
+    
+    public static Function<Rack, Set<DataBlock>> extractDataBlocksFromRack() {
+        return ExtractDataBlocksFromRack;
+    }
+    
+    public static Predicate<Rack> rackContainsNode(final NodeId nodeId) {
+        return new RackContainsNode(nodeId);
+    }
+    
     private final Logger logger = Logger.getLogger(getClass().getSimpleName());
     private final Set<Node> nodes;
     private final Resource networkResource;
@@ -51,7 +76,7 @@ public class Rack extends AbstractHardware<RackId> {
         return nodes;
     }
 
-    public Map<NodeId, Node> getNodeMap() {
+    public Map<NodeId, Node> getNodesById() {
         return uniqueIndex(nodes, extractIdFromHardware(NodeId.class));
     }
 
@@ -82,7 +107,7 @@ public class Rack extends AbstractHardware<RackId> {
         return unmodifiableMap(blocksById);
     }
 
-    public Map<DataBlockId, Integer> getDataBlockReplicationCount() {
+    public Map<DataBlockId, Integer> getDataBlockCount() {
         final Map<DataBlockId, Integer> result = newHashMap();
 
         for (final Node node : getNodes()) {
@@ -103,7 +128,7 @@ public class Rack extends AbstractHardware<RackId> {
     public SortedMap<Integer, Set<DataBlockId>> getReplicationCounts() {
         final SortedMap<Integer, Set<DataBlockId>> result = newTreeMap();
 
-        for (final Map.Entry<DataBlockId, Integer> entry : getDataBlockReplicationCount().entrySet()) {
+        for (final Map.Entry<DataBlockId, Integer> entry : getDataBlockCount().entrySet()) {
             final DataBlockId dataBlockId = entry.getKey();
             final Integer count = entry.getValue();
 
@@ -140,12 +165,7 @@ public class Rack extends AbstractHardware<RackId> {
     }
 
     public Set<Node> findNodesOfDataBlockId(final DataBlockId dataBlockId) {
-        return unmodifiableSet(
-                filter(getNodes(), new Predicate<Node>() {
-            public boolean apply(final Node node) {
-                return node.getDataBlockById().containsKey(dataBlockId);
-            }
-        }));
+        return unmodifiableSet(filter(getNodes(), nodeContainsDataBlock(dataBlockId)));
     }
 
     @Override
