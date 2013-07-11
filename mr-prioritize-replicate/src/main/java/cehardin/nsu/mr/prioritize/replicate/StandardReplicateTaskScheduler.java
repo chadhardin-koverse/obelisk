@@ -20,9 +20,6 @@ public class StandardReplicateTaskScheduler implements ReplicateTaskScheduler {
 
     private final Logger logger = Logger.getLogger(getClass().getSimpleName());
 
-    public StandardReplicateTaskScheduler() {
-    }
-
     public List<ReplicateTask> schedule(Cluster cluster) {
         final List<ReplicateTask> tasks = newArrayList();
 
