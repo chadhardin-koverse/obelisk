@@ -131,6 +131,12 @@ public class Simulator implements Callable<Object> {
             for (final Future<Double> future : futures) {
                 currentTime += future.get();
             }
+            
+            logger.log(Level.INFO, "Current Time: {0}", currentTime);
+            
+            if(tasks.isEmpty()) {
+                break;
+            }
         }
 
         return currentTime;
