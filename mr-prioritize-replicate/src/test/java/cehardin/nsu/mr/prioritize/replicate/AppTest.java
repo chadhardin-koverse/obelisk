@@ -4,14 +4,18 @@ import static com.google.common.collect.Sets.newHashSet;
 import static com.google.common.collect.Sets.newTreeSet;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Maps.newHashMap;
+import static com.google.common.collect.Maps.transformValues;
 import static com.google.common.base.Functions.forMap;
+import static java.lang.String.format;
 
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import cehardin.nsu.mr.prioritize.replicate.id.RackId;
 import cehardin.nsu.mr.prioritize.replicate.id.TaskId;
+import com.google.common.base.Function;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -64,6 +68,9 @@ public class AppTest {
         final Variables variables;
         final Simulator simulator;
         final ExecutorService executorService = Executors.newFixedThreadPool(16);
+        final double time;
+        final SortedMap<Integer, Integer> counts;
+        
         nodeIdToRackId = newHashMap();
 
         nodeIdToRackId.put(node11, rack1);
@@ -111,6 +118,22 @@ public class AppTest {
 
         simulator = new Simulator(variables, executorService);
 
-        simulator.call();
+        time = simulator.call();
+        
+        System.out.println(format("Time elapsed", time));
+        
+        counts = transformValues(simulator.getCluster().getReplicationCounts(), new Function<Set<DataBlockId>, Integer>() {
+            @Override
+            public Integer apply(final Set<DataBlockId> dataBlocks) {
+                return dataBlocks.size();
+            }
+        });
+        System.out.println("BLOCK COUNT\t\t\tNODE COUNT");
+        for(final Map.Entry<Integer, Integer> countEntry : counts.entrySet()) {
+            final int blockCount = countEntry.getKey();
+            final int nodeCount = countEntry.getValue();
+            System.out.println(format("%s\t\t\t%s", blockCount, nodeCount));
+            
+        }
     }
 }

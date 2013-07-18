@@ -30,7 +30,11 @@ public class App implements Runnable {
         
         cluster = clusterBuilder.buildCluster(variables);
     }
-    
+
+    @Override
+    public void run() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
     
     public static void main(String[] args) {
         final Bandwidth diskBadwidth;
@@ -59,6 +63,6 @@ public class App implements Runnable {
         maxConcurrentTasks = numNodes * 8;
         maxTasksPerNode = 2;
         
-        variables = new Variables
+//        variables = new Variables
     }
 }
