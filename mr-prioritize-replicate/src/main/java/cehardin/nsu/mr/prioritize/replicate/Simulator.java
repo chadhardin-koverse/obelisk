@@ -33,7 +33,7 @@ import java.util.logging.Logger;
  *
  * @author Chad
  */
-public class Simulator implements Callable<Object> {
+public class Simulator implements Callable<Double> {
 
     private final Logger logger = Logger.getLogger("Simulator");
     private final ExecutorService executorService;
@@ -49,7 +49,7 @@ public class Simulator implements Callable<Object> {
         this.cluster = clusterBuilder.buildCluster(variables);
     }
 
-    public Object call() throws Exception {
+    public Double call() throws Exception {
         final List<Resource> resources = newArrayList();
         final List<Task> tasks = newLinkedList();
         final double totalTime = 1000000;
@@ -140,5 +140,9 @@ public class Simulator implements Callable<Object> {
         }
 
         return currentTime;
+    }
+    
+    public Cluster getCluster() {
+        return cluster;
     }
 }
