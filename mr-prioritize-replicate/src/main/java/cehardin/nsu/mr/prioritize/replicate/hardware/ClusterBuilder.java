@@ -50,9 +50,11 @@ public class ClusterBuilder {
 
             for (final NodeId nodeId : entry.getValue()) {
                 final Set<DataBlock> dataBlocks = newHashSet();
-
-                for (final DataBlockId dataBlockId : nodeIdToDataBlockIds.get(nodeId)) {
-                    dataBlocks.add(new DataBlock(dataBlockId, variables.getBlockSize()));
+                
+                if(nodeIdToDataBlockIds.containsKey(nodeId)) {
+                    for (final DataBlockId dataBlockId : nodeIdToDataBlockIds.get(nodeId)) {
+                        dataBlocks.add(new DataBlock(dataBlockId, variables.getBlockSize()));
+                    }
                 }
                 nodes.add(new Node(nodeId, new Resource(String.format("%s-disk", nodeId), variables.getDiskBandwidth().getBytesPerMs()), dataBlocks));
             }

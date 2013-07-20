@@ -41,11 +41,11 @@ public class Resource {
 
             timeUsed += (capacityUsed / capacityInMs);
 
-            logger.info(String.format("Used %.2f bytes in %,dms: %s", capacityUsed, (long) timeUsed, reservation));
+//            logger.info(String.format("Used %.2f bytes in %,dms: %s", capacityUsed, (long) timeUsed, reservation));
 
             if (reservation.isDone()) {
                 reservation.getCallback().run();
-                logger.info(String.format("Reservation is complete: %s", reservation));
+//                logger.info(String.format("Reservation is complete: %s", reservation));
                 reservationIterator.remove();
             }
         }

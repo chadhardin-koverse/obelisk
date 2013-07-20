@@ -54,7 +54,8 @@ public class Simulator implements Callable<Double> {
         final List<Task> tasks = newLinkedList();
         final double totalTime = 1000000;
         final double timeStep = 1000;
-        final AtomicInteger numRunningTasks = new AtomicInteger(0);
+        final AtomicInteger numTasksRunning = new AtomicInteger(0);
+        final AtomicInteger numTasksCompleted = new AtomicInteger(0);
         final AtomicBoolean mapReduceJobStarted = new AtomicBoolean(false);
         double currentTime = 0;
 
@@ -72,34 +73,32 @@ public class Simulator implements Callable<Double> {
         while (currentTime < totalTime) {
             final double availableStepTime = (currentTime + timeStep) > totalTime ? totalTime - currentTime : timeStep;
             final Collection<Future<Double>> futures = new ArrayList<Future<Double>>(resources.size());
+            final Variables.MapReduceJob mapReduceJob = variables.getMapReduceJob();
+            final TaskNodeAllocator allocator = variables.getTaskNodeAllocator();
+            final Map<TaskId, NodeId> taskToNode;
+            
+            System.out.printf("START.  Time=%s, EndTime=%s%n", currentTime, totalTime);
+                
+            mapReduceJobStarted.set(true);
 
-            if (!mapReduceJobStarted.get()) {
-                final Variables.MapReduceJob mapReduceJob = variables.getMapReduceJob();
-                final long mapReduceJobStartTime = mapReduceJob.getTimeUnit().toMillis(mapReduceJob.getStartTime());
+            taskToNode = allocator.allocate(
+                    mapReduceJob.getTaskIds(),
+                    variables.getNodeIds(),
+                    variables.getDataBlockIdToNodeIds(),
+                    mapReduceJob.getTaskIdToDataBlockId());
 
-                if (mapReduceJobStartTime >= currentTime) {
-                    final TaskNodeAllocator allocator = variables.getTaskNodeAllocator();
-                    final Map<TaskId, NodeId> taskToNode;
+            System.out.printf("MR Scheduler scheduled %s tasks%n", taskToNode.size());
 
-                    mapReduceJobStarted.set(true);
+            for (final Map.Entry<TaskId, NodeId> entry : taskToNode.entrySet()) {
+                final TaskId taskId = entry.getKey();
+                final NodeId nodeId = entry.getValue();
+                final DataBlockId dataBlockId = mapReduceJob.getTaskIdToDataBlockId().apply(taskId);
+                final MapReduceTask mapReduceTask = new MapReduceTask(
+                    cluster.getNodesById().get(nodeId),
+                    cluster.getNodesById().get(nodeId).getDataBlockById().get(dataBlockId));
 
-                    taskToNode = allocator.allocate(
-                            mapReduceJob.getTaskIds(),
-                            variables.getNodeIds(),
-                            variables.getDataBlockIdToNodeIds(),
-                            mapReduceJob.getTaskIdToDataBlockId());
-
-                    for (final Map.Entry<TaskId, NodeId> entry : taskToNode.entrySet()) {
-                        final TaskId taskId = entry.getKey();
-                        final NodeId nodeId = entry.getValue();
-                        final DataBlockId dataBlockId = mapReduceJob.getTaskIdToDataBlockId().apply(taskId);
-                        final MapReduceTask mapReduceTask = new MapReduceTask(
-                                cluster.getNodesById().get(nodeId),
-                                cluster.getNodesById().get(nodeId).getDataBlockById().get(dataBlockId));
-
-                        tasks.add(mapReduceTask);
-                    }
-                }
+                mapReduceJob.getTaskIds().remove(taskId);
+                tasks.add(mapReduceTask);
             }
 
             if (!contains(tasks, instanceOf(ReplicateTask.class))) {
@@ -109,13 +108,15 @@ public class Simulator implements Callable<Double> {
 
             shuffle(tasks);
 
-            if (!tasks.isEmpty() && numRunningTasks.get() < variables.getMaxConcurrentTasks()) {
+            while (!tasks.isEmpty() && numTasksRunning.get() < variables.getMaxConcurrentTasks()) {
                 final Task task = tasks.remove(0);
-                logger.log(Level.INFO, "Starting Task: {0}", task);
+//                logger.log(Level.INFO, "Starting Task: {0}", task);
+                numTasksRunning.incrementAndGet();
                 task.run(new Runnable() {
                     public void run() {
-                        logger.log(Level.INFO, "Task Finished: {0}", task);
-                        numRunningTasks.decrementAndGet();
+//                        logger.log(Level.INFO, "Task Finished: {0}", task);
+                        numTasksRunning.decrementAndGet();
+                        numTasksCompleted.incrementAndGet();
                     }
                 });
             }
@@ -128,15 +129,19 @@ public class Simulator implements Callable<Double> {
                 }));
             }
 
+            long time = 0;
             for (final Future<Double> future : futures) {
-                currentTime += future.get();
+                time += future.get();
             }
             
-            logger.log(Level.INFO, "Current Time: {0}", currentTime);
+            currentTime += time / futures.size();
             
-            if(tasks.isEmpty()) {
-                break;
-            }
+            System.out.printf("MR Job Tasks left: %s%n", variables.getMapReduceJob().getTaskIds().size());
+            System.out.printf("STOP: Current Time: %s.  Task Running: %s.  Tasks Completed: %s.  Tasks Waiting: %s%n", currentTime, numTasksRunning.get(), numTasksCompleted.get(), tasks.size());
+            System.out.println();
+//            if(tasks.isEmpty() && numTasksRunning.get() == 0) {
+//                break;
+//            }
         }
 
         return currentTime;

@@ -39,17 +39,22 @@ import java.util.concurrent.TimeUnit;
  * @author cehar_000
  */
 public class App implements Runnable {
-    private final Cluster cluster;
+    private final Variables variables;
     
     public App(Variables variables) {
-        final ClusterBuilder clusterBuilder = new ClusterBuilder();
-        
-        cluster = clusterBuilder.buildCluster(variables);
+        this.variables = variables;
     }
 
     @Override
     public void run() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        try {
+            final Simulator simulator = new Simulator(variables, Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
+            final double time = simulator.call();
+            System.out.printf("Elapsed time: %s", time);
+        }
+        catch(Exception e) {
+            throw new RuntimeException("Failed", e);
+        }
     }
     
     public static void main(String[] args) {
@@ -62,25 +67,9 @@ public class App implements Runnable {
         final int maxConcurrentTasks;
         final int maxTasksPerNode;
         final double nodePercentageFailed;
-        final SortedSet<Variables.NodeFailure> nodeFailures;
         final int numRacks;
-        final int nodesPerRack;
         final int numDataBlocks;
-        final Set<RackId> rackIds;
-        final Set<NodeId> nodeIds;
-        final Set<DataBlockId> dataBlockIds;
-        final Map<NodeId, RackId> nodeToRack;
-        final Multimap<RackId, NodeId> rackToNodes;
-        final Multimap<DataBlockId, NodeId> dataBlockToNodes;
-        final Function<NodeId, RackId> nodeToRackFunction;
-        final Function<DataBlockId, Set<NodeId>> dataBlockToNodesFunction;
-        final TaskNodeAllocator taskNodeAllocator;
-        final ReplicateTaskScheduler replicateTaskScheduler;
         final int numTasks;
-        final Set<TaskId> taskIds;
-        final Map<TaskId, DataBlockId> taskToDataBlock;
-        final MapReduceJob mapReduceJob;
-        
         final Variables variables;
         
         diskBadwidth = new Bandwidth(100_000_000L, 1, TimeUnit.SECONDS);
@@ -90,93 +79,28 @@ public class App implements Runnable {
         numNodes = 1024;
         numRacks = numNodes / 16;
         numDataBlocks = numNodes * 2;
-        nodesPerRack = numNodes / numRacks;
-        maxConcurrentTasks = numNodes / 8;
+        maxConcurrentTasks = numNodes * 4;
         maxTasksPerNode = 2;
-        rackIds = newHashSet();
-        nodeIds = newHashSet();
-        rackToNodes = HashMultimap.create();
-        dataBlockToNodes = HashMultimap.create();
-        nodeToRack = newHashMap();
-        dataBlockIds = newHashSet();
         nodePercentageFailed = 0.25;
-        taskNodeAllocator = new StandardTaskNodeAllocator();
-        replicateTaskScheduler = new StandardReplicateTaskScheduler();
-        numTasks = numNodes * 2;
+        numTasks = numNodes * 10;
         
-        taskIds = newHashSet();
-        for(int i=0; i < numTasks; i++) {
-            final TaskId taskId = new TaskId(format("t-%s", i));
-            taskIds.add(taskId);
-        }
-        
-        taskToDataBlock = newHashMap();
-        for(final TaskId taskId : taskIds) {
-            final DataBlockId dataBlockId = pickRandom(random, dataBlockIds);
-            taskToDataBlock.put(taskId, dataBlockId);
-        }
-        
-        mapReduceJob = new MapReduceJob(10, TimeUnit.SECONDS, taskIds, forMap(taskToDataBlock));
-        for(int r=1; r <= numRacks; r++) {
-            final RackId rackId = new RackId(format("r-%s",1));
-            rackIds.add(rackId);
-            for(int n=1; n <= nodesPerRack; n++) {
-                final NodeId nodeId = new NodeId(format("r-%s-n-%s", r, n));
-                nodeToRack.put(nodeId, rackId);
-                rackToNodes.put(rackId, nodeId);
-                nodeIds.add(nodeId);
-            }
-        }
-        
-//        nodeFailures = newTreeSet(pickRandomPercentage(random, nodeIds, nodePercentageFailed));
-        nodeFailures = newTreeSet();
-        
-        nodeToRackFunction = forMap(nodeToRack);
-        
-        for(int d=1; d <= numDataBlocks; d++) {
-            final DataBlockId dataBlockId = new DataBlockId(format("d-%s", d));
-            dataBlockIds.add(dataBlockId);
-        }
-        
-        for(final DataBlockId dataBlockId : dataBlockIds) {
-            final RackId rack1 = pickRandom(random, rackIds);
-            final RackId rack2 = pickRandom(random, rackIds, rack1);
-            final NodeId node1 = pickRandom(random, rackToNodes.get(rack1));
-            final NodeId node2 = pickRandom(random, rackToNodes.get(rack1), node1);
-            final NodeId node3 = pickRandom(random, rackToNodes.get(rack2));
-            
-            dataBlockToNodes.put(dataBlockId, node1);
-            dataBlockToNodes.put(dataBlockId, node2);
-            dataBlockToNodes.put(dataBlockId, node3);
-        }
-        
-        dataBlockToNodesFunction = forMap(transformValues(dataBlockToNodes.asMap(), new Function<Collection<NodeId>, Set<NodeId>>() {
-            @Override
-            public Set<NodeId> apply(Collection<NodeId> nodeIds) {
-                return newHashSet(nodeIds);
-            }            
-        }));
-        
-        variables = new Variables(
+        VariablesFactory variablesFactory = new VariablesFactory(
+                random, 
                 diskBadwidth, 
                 rackBandwidth, 
                 clusterBandwidth, 
                 blockSize, 
+                numNodes, 
+                numRacks, 
+                numDataBlocks, 
                 maxConcurrentTasks, 
                 maxTasksPerNode, 
-                nodeFailures, 
-                rackIds, 
-                nodeIds, 
-                dataBlockIds, 
-                nodeToRackFunction, 
-                dataBlockToNodesFunction, 
-                taskNodeAllocator, 
-                replicateTaskScheduler, 
-                mapReduceJob);
+                nodePercentageFailed, 
+                numTasks);
+        variables = variablesFactory.get();
         
-        final Simulator simulator = new Simulator(variables, Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
-        
-        simulator.call();
+        App app = new App(variables);
+        app.run();
     }
 }
 
