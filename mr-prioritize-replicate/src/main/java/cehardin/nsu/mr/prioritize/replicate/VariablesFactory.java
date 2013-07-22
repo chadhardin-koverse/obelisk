@@ -125,6 +125,10 @@ public class VariablesFactory implements Supplier<Variables>{
         
         nodeFailures = newTreeSet();
         
+        for(final NodeId failedNode : Util.pickRandomPercentage(random, nodeIds, nodePercentageFailed)) {
+            nodeFailures.add(new Variables.NodeFailure(failedNode, 0, TimeUnit.MINUTES));
+        }
+        
         nodeToRackFunction = forMap(nodeToRack);
         
         dataBlockToNodesFunction = forMap(transformValues(dataBlockToNodes.asMap(), new Function<Collection<NodeId>, Set<NodeId>>() {

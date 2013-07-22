@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -48,10 +49,12 @@ public class App implements Runnable {
     @Override
     public void run() {
         try {
-            final Simulator simulator = new Simulator(variables, Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
+            final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+            final Simulator simulator = new Simulator(variables, executorService);
             final double time = simulator.call();
             System.out.printf("Elapsed time: %s", time);
-        }
+            executorService.shutdown();
+        }   
         catch(Exception e) {
             throw new RuntimeException("Failed", e);
         }
@@ -81,7 +84,7 @@ public class App implements Runnable {
         numDataBlocks = numNodes * 2;
         maxConcurrentTasks = numNodes * 4;
         maxTasksPerNode = 2;
-        nodePercentageFailed = 0.25;
+        nodePercentageFailed = 0.05;
         numTasks = numNodes * 10;
         
         VariablesFactory variablesFactory = new VariablesFactory(
@@ -101,6 +104,7 @@ public class App implements Runnable {
         
         App app = new App(variables);
         app.run();
+        
     }
 }
 

@@ -71,10 +71,11 @@ public class Node extends AbstractHardware<NodeId> {
     public Map<DataBlockId, DataBlock> getDataBlockById() {
         return uniqueIndex(getDataBlocks(), extractIdFromDataBlock());
     }
-
+    
     @Override
     public String toString() {
         return Objects.toStringHelper(getClass()).
+                add("id", getId()).
                 add("dataBlocks", dataBlocks).
                 add("diskResource", diskResource).
                 toString();

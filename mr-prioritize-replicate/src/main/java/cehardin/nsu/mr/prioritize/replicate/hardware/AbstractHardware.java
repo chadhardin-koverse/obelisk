@@ -6,6 +6,7 @@ package cehardin.nsu.mr.prioritize.replicate.hardware;
 
 import cehardin.nsu.mr.prioritize.replicate.id.Id;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 
 /**
  *
@@ -35,5 +36,29 @@ public abstract class AbstractHardware<ID extends Id> implements Hardware<ID> {
 
     public ID getId() {
         return id;
+    }
+    
+    
+    @Override
+    public final int hashCode() {
+        return Objects.hashCode(getId());
+    }
+    
+    @Override
+    public final boolean equals(Object o) {
+        final boolean equal;
+        
+        if(this == o) {
+            equal = true;
+        }
+        else if(getClass().isInstance(o)) {
+            final AbstractHardware other = getClass().cast(o);
+            equal = Objects.equal(getId(), other.getId());
+        }
+        else {
+            equal = false;
+        }
+        
+        return equal;
     }
 }
