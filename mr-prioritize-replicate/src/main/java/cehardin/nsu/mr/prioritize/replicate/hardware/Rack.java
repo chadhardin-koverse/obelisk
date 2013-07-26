@@ -106,6 +106,24 @@ public class Rack extends AbstractHardware<RackId> {
 
         return unmodifiableMap(blocksById);
     }
+    
+    public Map<DataBlockId, Set<NodeId>> getDataBlockIdToNodeIds() {
+        final Map<DataBlockId, Set<NodeId>> dataBlocksToNodes = newHashMap();
+        
+        for(final Node node : nodes) {
+            final NodeId nodeId = node.getId();
+            for(final DataBlock dataBlock : node.getDataBlocks()) {
+                final DataBlockId dataBlockId = dataBlock.getId();
+                if(!dataBlocksToNodes.containsKey(dataBlockId)) {
+                    dataBlocksToNodes.put(dataBlockId, new HashSet<NodeId>());
+                }
+                
+                dataBlocksToNodes.get(dataBlockId).add(nodeId);
+            }
+        }
+        
+        return unmodifiableMap(dataBlocksToNodes);
+    }
 
     public Map<DataBlockId, Integer> getDataBlockCount() {
         final Map<DataBlockId, Integer> result = newHashMap();

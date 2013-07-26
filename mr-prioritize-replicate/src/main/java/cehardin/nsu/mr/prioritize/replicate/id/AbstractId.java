@@ -2,6 +2,7 @@ package cehardin.nsu.mr.prioritize.replicate.id;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ComparisonChain;
 
 /**
  *
@@ -21,6 +22,13 @@ public abstract class AbstractId implements Id {
         return value;
     }
 
+    
+    
+    @Override
+    public int compareTo(Id o) {
+        return ComparisonChain.start().compare(value, o.getValue()).result();
+    }
+    
     @Override
     public final int hashCode() {
         return Objects.hashCode(getClass(), getValue());
@@ -36,11 +44,7 @@ public abstract class AbstractId implements Id {
             equal = false;
         } else if (o instanceof AbstractId) {
             final AbstractId other = (AbstractId) o;
-            if (o.getClass().equals(getClass())) {
                 equal = value.equals(other.value);
-            } else {
-                equal = false;
-            }
         } else {
             equal = false;
         }

@@ -52,7 +52,7 @@ public class App implements Runnable {
             final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
             final Simulator simulator = new Simulator(variables, executorService);
             final double time = simulator.call();
-            System.out.printf("Elapsed time: %s", time);
+            System.out.printf("Elapsed time: %s%n", time);
             executorService.shutdown();
         }   
         catch(Exception e) {
@@ -84,7 +84,7 @@ public class App implements Runnable {
         numDataBlocks = numNodes * 2;
         maxConcurrentTasks = numNodes * 4;
         maxTasksPerNode = 2;
-        nodePercentageFailed = 0.05;
+        nodePercentageFailed = 0.10;
         numTasks = numNodes * 10;
         
         VariablesFactory variablesFactory = new VariablesFactory(

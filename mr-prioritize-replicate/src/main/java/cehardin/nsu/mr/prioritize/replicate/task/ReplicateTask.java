@@ -30,9 +30,7 @@ public class ReplicateTask implements Task {
         public boolean apply(Task task) {
             if(ReplicateTask.class.isInstance(task)) {
                 final ReplicateTask replicateTask = ReplicateTask.class.cast(task);
-                return Objects.equal(fromRackId, replicateTask.fromRack.getId()) &&
-                    Objects.equal(fromNodeId, replicateTask.fromNode.getId()) &&
-                    Objects.equal(dataBlockId, replicateTask.dataBlock.getId());
+                return Objects.equal(dataBlockId, replicateTask.dataBlock.getId());
             }
             else {
                 return false;

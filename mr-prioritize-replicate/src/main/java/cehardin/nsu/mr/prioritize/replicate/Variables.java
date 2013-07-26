@@ -5,6 +5,8 @@ import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import cehardin.nsu.mr.prioritize.replicate.id.RackId;
 import cehardin.nsu.mr.prioritize.replicate.id.TaskId;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
+import com.google.common.collect.ComparisonChain;
 import java.io.Serializable;
 import java.util.Set;
 import java.util.SortedSet;
@@ -41,7 +43,30 @@ public class Variables implements Serializable {
         }
 
         public int compareTo(NodeFailure o) {
-            return time < o.time ? -1 : time > o.time ? 1 : 0;
+            return ComparisonChain.start().compare(time, o.time).compare(nodeId, o.nodeId).result();
+        }
+        
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(nodeId);
+        }
+        
+        @Override
+        public boolean equals(Object o) {
+            final boolean equal;
+            
+            if(this == o) {
+                equal = true;
+            }
+            else if(getClass().isInstance(o)) {
+                NodeFailure other = getClass().cast(o);
+                equal = Objects.equal(nodeId, other.nodeId);
+            }
+            else {
+                equal = false;
+            }
+            
+            return equal;
         }
     }
 

@@ -74,6 +74,25 @@ public class Cluster {
 
         return unmodifiableMap(blocksById);
     }
+    
+    public Map<DataBlockId, Set<NodeId>> getDataBlockIdToNodeIds() {
+        final Map<DataBlockId, Set<NodeId>> dataBlocksToNodes = newHashMap();
+        
+        for(final Rack rack : racks) {
+            for(final Map.Entry<DataBlockId, Set<NodeId>> entry : rack.getDataBlockIdToNodeIds().entrySet()) {
+                final DataBlockId dataBlockId = entry.getKey();
+                final Set<NodeId> nodeIds = entry.getValue();
+                
+                if(!dataBlocksToNodes.containsKey(dataBlockId)) {
+                    dataBlocksToNodes.put(dataBlockId, new HashSet<NodeId>());
+                }
+                
+                dataBlocksToNodes.get(dataBlockId).addAll(nodeIds);
+            }
+        }
+        
+        return unmodifiableMap(dataBlocksToNodes);
+    }
 
     public Map<DataBlockId, Integer> getDataBlockCount() {
         final Map<DataBlockId, Integer> result = newHashMap();

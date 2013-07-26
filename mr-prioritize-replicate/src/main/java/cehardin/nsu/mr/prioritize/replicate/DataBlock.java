@@ -36,6 +36,31 @@ public class DataBlock {
     public int getSize() {
         return size;
     }
+    
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+        final boolean equal;
+        
+        if(this == o) {
+            equal = true;
+        }
+        else if(getClass().isInstance(o)) {
+            final DataBlock other = DataBlock.class.cast(o);
+            
+            equal = Objects.equal(id, other.id);
+        }
+        else {
+            equal = false;
+        }
+        
+        return equal;
+        
+    }
 
     @Override
     public String toString() {

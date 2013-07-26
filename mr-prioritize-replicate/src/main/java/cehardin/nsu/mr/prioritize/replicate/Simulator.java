@@ -23,9 +23,12 @@ import cehardin.nsu.mr.prioritize.replicate.id.TaskId;
 import cehardin.nsu.mr.prioritize.replicate.task.MapReduceTask;
 import cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask;
 import cehardin.nsu.mr.prioritize.replicate.task.Task;
+import com.google.common.base.Functions;
+import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +64,7 @@ public class Simulator implements Callable<Double> {
     public Double call() throws Exception {
         final List<Resource> resources = newArrayList();
         final List<Task> tasks = newLinkedList();
+        final List<Task> runningTasks = Lists.newCopyOnWriteArrayList();
         final double totalTime = 1000000;
         final double timeStep = 1000;
         final AtomicInteger numMRTasksRunning = new AtomicInteger(0);
@@ -87,6 +91,7 @@ public class Simulator implements Callable<Double> {
             final Variables.MapReduceJob mapReduceJob = variables.getMapReduceJob();
             final TaskNodeAllocator allocator = variables.getTaskNodeAllocator();
             final Map<TaskId, NodeId> taskToNode;
+            int numSkipped = 0;
             
             System.out.printf("START.  Time=%s, EndTime=%s%n", currentTime, totalTime);
                 
@@ -94,8 +99,8 @@ public class Simulator implements Callable<Double> {
 
             taskToNode = allocator.allocate(
                     mapReduceJob.getTaskIds(),
-                    variables.getNodeIds(),
-                    variables.getDataBlockIdToNodeIds(),
+                    cluster.getNodesById().keySet(),
+                    Functions.forMap(cluster.getDataBlockIdToNodeIds(), new HashSet<NodeId>()),
                     mapReduceJob.getTaskIdToDataBlockId());
 
             System.out.printf("MR Scheduler scheduled %s tasks%n", taskToNode.size());
@@ -114,10 +119,15 @@ public class Simulator implements Callable<Double> {
                         mapReduceJob.getTaskIds().remove(taskId);
                         tasks.add(mapReduceTask);
                     }
+                    else {
+                        numSkipped++;
+                    }
+                }
+                else {
+                    numSkipped++;
                 }
             }
             
-            System.out.printf("There are %s node failures%n", variables.getNodeFailures().size());
             if(!variables.getNodeFailures().isEmpty()) {
                 final Iterator<Variables.NodeFailure> nodeFailures = variables.getNodeFailures().iterator();
                 
@@ -144,10 +154,10 @@ public class Simulator implements Callable<Double> {
                 }
             }
 
-            if(all(tasks, not(instanceOf(ReplicateTask.class)))) {
+            /*if(all(tasks, not(instanceOf(ReplicateTask.class))))*/ {
                 int count = 0;
                 for(final ReplicateTask replicateTask : variables.getReplicateTaskScheduler().schedule(cluster)) {
-                    if(all(tasks, not(replicateTaskSameSource(replicateTask)))) {
+                    if(all(runningTasks, not(replicateTaskSameSource(replicateTask)))) {
                         tasks.add(replicateTask);
                         count++;
                     }
@@ -170,6 +180,7 @@ public class Simulator implements Callable<Double> {
                 } else {
                     numReplicateTasksRunning.incrementAndGet();
                 }
+                runningTasks.add(task);
                 
                 task.run(new Runnable() {
                     public void run() {
@@ -181,6 +192,7 @@ public class Simulator implements Callable<Double> {
                             numReplicateTasksRunning.decrementAndGet();
                             numReplicateTasksCompleted.incrementAndGet();
                         }
+                        runningTasks.remove(task);
                     }
                 });
             }
@@ -201,21 +213,27 @@ public class Simulator implements Callable<Double> {
             currentTime += time / futures.size();
             
             System.out.printf("MR Job Tasks left: %s%n", variables.getMapReduceJob().getTaskIds().size());
+            System.out.printf("# Data blocks with 3 copies: %s%n", cluster.getReplicationCounts().containsKey(3) ? cluster.getReplicationCounts().get(3).size() : 0);
+            System.out.printf("# Data blocks with 2 copies: %s%n", cluster.getReplicationCounts().containsKey(2) ? cluster.getReplicationCounts().get(2).size() : 0);
+            System.out.printf("# Data blocks with 1 copy: %s%n", cluster.getReplicationCounts().containsKey(1) ? cluster.getReplicationCounts().get(1).size() : 0);
+            System.out.printf("# Data blocks with 0 copies: %s%n", difference(variables.getDataBlockIds(),cluster.getDataBlockIdToNodeIds().keySet()).size());
+            System.out.printf("# Tasks: %s%n", tasks.size());
             System.out.printf(
-                    "STOP: Current Time: %s.  Tasks Running: %s / %s.  Tasks Completed: %s / %s.  Failed Nodes: %s%n", 
+                    "STOP: Current Time: %s.  Tasks Running: %s / %s.  Tasks Completed: %s / %s.  Failed Nodes: %s.  Tasks skipped: %s%n", 
                     currentTime, 
                     numMRTasksRunning.get(), 
                     numReplicateTasksRunning.get(),
                     numMRTasksCompleted.get(),
                     numReplicateTasksCompleted.get(),
-                    numFailedNodes);
+                    numFailedNodes,
+                    numSkipped);
             System.out.println();
             
             if(
                     tasks.isEmpty() && 
                     numMRTasksRunning.get() == 0 && 
-                    numReplicateTasksRunning.get() == 0 &&
-                    mapReduceJob.getTaskIds().isEmpty()) {
+                    numReplicateTasksRunning.get() == 0 ) { //&&
+//                    (mapReduceJob.getTaskIds().isEmpty() || mapReduceJob.getTaskIds().size() == numSkipped)) {
                 System.out.printf("END%n%n");
                 break;
             }
@@ -230,7 +248,7 @@ public class Simulator implements Callable<Double> {
             System.out.printf("%s\t\t%s%n", count, numBlocks);
         }
         
-        System.out.printf("%s\t\t%s%n", 0, difference(cluster.getDataBlocksById().keySet(), variables.getDataBlockIds()).size());
+        System.out.printf("%s\t\t%s%n", 0, difference(variables.getDataBlockIds(),cluster.getDataBlocksById().keySet()).size());
         
         return currentTime;
     }
