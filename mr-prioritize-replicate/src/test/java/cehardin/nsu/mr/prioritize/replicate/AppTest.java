@@ -67,7 +67,6 @@ public class AppTest {
         final Variables.MapReduceJob mapReduceJob;
         final Variables variables;
         final Simulator simulator;
-        final ExecutorService executorService = Executors.newFixedThreadPool(16);
         final double time;
         final SortedMap<Integer, Integer> counts;
         
@@ -116,7 +115,7 @@ public class AppTest {
                 replicateTaskScheduler,
                 mapReduceJob);
 
-        simulator = new Simulator(variables, executorService);
+        simulator = new Simulator(variables);
 
         time = simulator.call();
         

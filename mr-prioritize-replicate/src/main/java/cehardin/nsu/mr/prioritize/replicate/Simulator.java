@@ -1,15 +1,11 @@
 package cehardin.nsu.mr.prioritize.replicate;
 
-import static com.google.common.base.Predicates.instanceOf;
 import static com.google.common.base.Predicates.not;
-import static com.google.common.collect.Iterables.any;
 import static com.google.common.collect.Iterables.all;
-import static com.google.common.collect.Iterables.size;
-import static com.google.common.collect.Iterables.filter;
 import static com.google.common.collect.Sets.difference;
-import static com.google.common.collect.Sets.newHashSet;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Lists.newLinkedList;
+import static com.google.common.collect.Lists.newCopyOnWriteArrayList;
 import static java.util.Collections.shuffle;
 import static cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask.replicateTaskSameSource;
 
@@ -26,8 +22,6 @@ import cehardin.nsu.mr.prioritize.replicate.task.Task;
 import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -35,10 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -48,23 +39,20 @@ import java.util.logging.Logger;
 public class Simulator implements Callable<Double> {
 
     private final Logger logger = Logger.getLogger("Simulator");
-    private final ExecutorService executorService;
     private final Variables variables;
     private final Cluster cluster;
 
     public Simulator(
-            final Variables variables,
-            final ExecutorService executorService) {
+            final Variables variables) {
         final ClusterBuilder clusterBuilder = new ClusterBuilder();
         this.variables = variables;
-        this.executorService = executorService;
         this.cluster = clusterBuilder.buildCluster(variables);
     }
 
     public Double call() throws Exception {
         final List<Resource> resources = newArrayList();
         final List<Task> tasks = newLinkedList();
-        final List<Task> runningTasks = Lists.newCopyOnWriteArrayList();
+        final List<Task> runningTasks = newCopyOnWriteArrayList();
         final double totalTime = 1000000;
         final double timeStep = 1000;
         final AtomicInteger numMRTasksRunning = new AtomicInteger(0);
@@ -87,7 +75,6 @@ public class Simulator implements Callable<Double> {
 
         while (currentTime < totalTime) {
             final double availableStepTime = (currentTime + timeStep) > totalTime ? totalTime - currentTime : timeStep;
-            final Collection<Future<Double>> futures = new ArrayList<Future<Double>>(resources.size());
             final Variables.MapReduceJob mapReduceJob = variables.getMapReduceJob();
             final TaskNodeAllocator allocator = variables.getTaskNodeAllocator();
             final Map<TaskId, NodeId> taskToNode;
@@ -144,7 +131,7 @@ public class Simulator implements Callable<Double> {
                                 final Node node = nodes.next();
                                 
                                 if(node.getId().equals(nodeId)) {
-                                    System.out.printf("Node has failed: %s%n", node.getId());
+//                                    System.out.printf("Node has failed: %s%n", node.getId());
                                     nodes.remove();
                                     numFailedNodes++;
                                 }
@@ -197,20 +184,12 @@ public class Simulator implements Callable<Double> {
                 });
             }
 
-            for (final Resource resource : resources) {
-                futures.add(executorService.submit(new Callable<Double>() {
-                    public Double call() throws Exception {
-                        return resource.execute(availableStepTime);
-                    }
-                }));
-            }
-
             long time = 0;
-            for (final Future<Double> future : futures) {
-                time += future.get();
+            for (final Resource resource : resources) {
+                time += resource.execute(availableStepTime);
             }
             
-            currentTime += time / futures.size();
+            currentTime += time / resources.size();
             
             System.out.printf("MR Job Tasks left: %s%n", variables.getMapReduceJob().getTaskIds().size());
             System.out.printf("# Data blocks with 3 copies: %s%n", cluster.getReplicationCounts().containsKey(3) ? cluster.getReplicationCounts().get(3).size() : 0);
