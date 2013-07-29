@@ -16,8 +16,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * @author cehar_000
  */
-public class CsvEventWriter implements EventWriter {
-    private final List<String> header = unmodifiableList(newArrayList("task", "type", "date", "node", "dataBlock", "fromNode", "toNode", "fromRack", "toRack"));
+public class CsvEventWriter implements StatusWriter {
+    private final List<String> header = unmodifiableList(newArrayList("time", "numNodes", "numFailedNodes", "numDataBlocks", "numMRTasks", "numReplicaTasks", "num0Replicas", "num1Replicas", "num2Replicas", "num3Replicas", "numOver3Replicas"));
     private final AtomicBoolean wroteHeader = new AtomicBoolean(false);
     private final Writer writer;
 
@@ -25,7 +25,7 @@ public class CsvEventWriter implements EventWriter {
         this.writer = writer;
     }
 
-    public void write(Event event) {
+    public void write(Status status) {
         try {
             if(wroteHeader.compareAndSet(false, true)) {
                 write(header);

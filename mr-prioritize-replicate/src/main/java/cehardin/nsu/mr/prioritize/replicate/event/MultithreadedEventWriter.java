@@ -9,12 +9,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  *
  * @author cehar_000
  */
-public class MultithreadedEventWriter implements EventWriter {
+public class MultithreadedEventWriter implements StatusWriter {
     private static class WriterTask extends TimerTask {
         private final Queue<Event> queue;
-        private final EventWriter eventWriter;
+        private final StatusWriter eventWriter;
 
-        public WriterTask(Queue<Event> queue, EventWriter eventWriter) {
+        public WriterTask(Queue<Event> queue, StatusWriter eventWriter) {
             this.queue = queue;
             this.eventWriter = eventWriter;
         }
@@ -29,7 +29,7 @@ public class MultithreadedEventWriter implements EventWriter {
     }
     private final Queue<Event> queue = new ConcurrentLinkedQueue<Event>();
 
-    public MultithreadedEventWriter(EventWriter eventWriter, Timer timer, long period) {
+    public MultithreadedEventWriter(StatusWriter eventWriter, Timer timer, long period) {
         timer.scheduleAtFixedRate(new WriterTask(queue, eventWriter), period, period);
     }
 

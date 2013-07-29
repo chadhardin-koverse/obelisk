@@ -19,7 +19,9 @@ import com.google.common.collect.Multimap;
 import static com.google.common.collect.Sets.newHashSet;
 import static com.google.common.collect.Sets.newTreeSet;
 import static java.lang.String.format;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -42,10 +44,26 @@ public class VariablesFactory implements Supplier<Variables>{
     private final int numDataBlocks;
     private final int maxConcurrentTasks;
     private final int maxTasksPerNode;
-    private final double nodePercentageFailed;
+    private final double nodePercentageFailed1;
+    private final double nodePercentageFailed2;
+    private final long nodeFailed2Time; 
     private final int numTasks;
 
-    public VariablesFactory(Random random, Variables.Bandwidth diskBadwidth, Variables.Bandwidth rackBandwidth, Variables.Bandwidth clusterBandwidth, int blockSize, int numNodes, int numRacks, int numDataBlocks, int maxConcurrentTasks, int maxTasksPerNode, double nodePercentageFailed, int numTasks) {
+    public VariablesFactory(
+            Random random, 
+            Variables.Bandwidth diskBadwidth, 
+            Variables.Bandwidth rackBandwidth, 
+            Variables.Bandwidth clusterBandwidth, 
+            int blockSize, 
+            int numNodes, 
+            int numRacks, 
+            int numDataBlocks, 
+            int maxConcurrentTasks, 
+            int maxTasksPerNode, 
+            double nodePercentageFailed1,
+            double nodePercentageFailed2,
+            long nodeFailed2Time,
+            int numTasks) {
         this.random = random;
         this.diskBadwidth = diskBadwidth;
         this.rackBandwidth = rackBandwidth;
@@ -56,13 +74,16 @@ public class VariablesFactory implements Supplier<Variables>{
         this.numDataBlocks = numDataBlocks;
         this.maxConcurrentTasks = maxConcurrentTasks;
         this.maxTasksPerNode = maxTasksPerNode;
-        this.nodePercentageFailed = nodePercentageFailed;
+        this.nodePercentageFailed1 = nodePercentageFailed1;
+        this.nodePercentageFailed2 = nodePercentageFailed2;
+        this.nodeFailed2Time = nodeFailed2Time;
         this.numTasks = numTasks;
     }
 
     @Override
     public Variables get() {
         final SortedSet<Variables.NodeFailure> nodeFailures;
+        final Set<NodeId> failedNodeIds = newHashSet();
         final int nodesPerRack = numNodes / numRacks;
         final Set<RackId> rackIds = newHashSet();
         final Set<NodeId> nodeIds = newHashSet();
@@ -125,9 +146,18 @@ public class VariablesFactory implements Supplier<Variables>{
         
         nodeFailures = newTreeSet();
         
-        for(final NodeId failedNode : Util.pickRandomPercentage(random, nodeIds, nodePercentageFailed)) {
+        //first failuers
+        for(final NodeId failedNode : Util.pickRandomPercentage(random, nodeIds, nodePercentageFailed1)) {
             final Variables.NodeFailure nodeFailure = new Variables.NodeFailure(failedNode, 0, TimeUnit.MINUTES);
             nodeFailures.add(nodeFailure);
+            failedNodeIds.add(failedNode);
+        }
+        
+        //second failuers
+        for(final NodeId failedNode : Util.pickRandomPercentage(random, nodeIds, failedNodeIds, nodePercentageFailed2)) {
+            final Variables.NodeFailure nodeFailure = new Variables.NodeFailure(failedNode, nodeFailed2Time, TimeUnit.MILLISECONDS);
+            nodeFailures.add(nodeFailure);
+            failedNodeIds.add(failedNode);
         }
         
         System.out.printf("Set up %s node failures%n", nodeFailures.size());

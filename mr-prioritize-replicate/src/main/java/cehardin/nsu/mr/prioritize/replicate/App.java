@@ -67,7 +67,9 @@ public class App implements Runnable {
         final int numNodes;
         final int maxConcurrentTasks;
         final int maxTasksPerNode;
-        final double nodePercentageFailed;
+        final double nodePercentageFailed1;
+        final double nodePercentageFailed2;
+        final long nodeFail2Time;
         final int numRacks;
         final int numDataBlocks;
         final int numTasks;
@@ -82,7 +84,9 @@ public class App implements Runnable {
         numDataBlocks = numNodes * 2;
         maxConcurrentTasks = numNodes * 4;
         maxTasksPerNode = 2;
-        nodePercentageFailed = 0.01;
+        nodePercentageFailed1 = 0.10;
+        nodePercentageFailed2 = 0.10;
+        nodeFail2Time = TimeUnit.SECONDS.toMillis(10);
         numTasks = numNodes * 10;
         
         VariablesFactory variablesFactory = new VariablesFactory(
@@ -96,7 +100,9 @@ public class App implements Runnable {
                 numDataBlocks, 
                 maxConcurrentTasks, 
                 maxTasksPerNode, 
-                nodePercentageFailed, 
+                nodePercentageFailed1, 
+                nodePercentageFailed2,
+                nodeFail2Time,
                 numTasks);
         variables = variablesFactory.get();
         

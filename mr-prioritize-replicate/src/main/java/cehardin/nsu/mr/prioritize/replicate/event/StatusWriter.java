@@ -7,6 +7,6 @@ import java.io.IOException;
  *
  * @author cehar_000
  */
-public interface EventWriter {
-    void write(Event event);
+public interface StatusWriter {
+    void write(Status status);
 }
