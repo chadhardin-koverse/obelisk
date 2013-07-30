@@ -1,5 +1,7 @@
 package cehardin.nsu.mr.prioritize.replicate;
 
+import cehardin.nsu.mr.prioritize.replicate.event.Status;
+import cehardin.nsu.mr.prioritize.replicate.event.StatusWriter;
 import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.Iterables.all;
 import static com.google.common.collect.Sets.difference;
@@ -20,7 +22,9 @@ import cehardin.nsu.mr.prioritize.replicate.task.MapReduceTask;
 import cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask;
 import cehardin.nsu.mr.prioritize.replicate.task.Task;
 import com.google.common.base.Functions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
+import java.util.HashMap;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -41,15 +45,18 @@ public class Simulator implements Callable<Double> {
     private final Logger logger = Logger.getLogger("Simulator");
     private final Variables variables;
     private final Cluster cluster;
-
+    private final Supplier<StatusWriter> statusWriterSupplier;
     public Simulator(
-            final Variables variables) {
+            final Variables variables,
+            final Supplier<StatusWriter> statusWriterSupplier) {
         final ClusterBuilder clusterBuilder = new ClusterBuilder();
         this.variables = variables;
         this.cluster = clusterBuilder.buildCluster(variables);
+        this.statusWriterSupplier = statusWriterSupplier;
     }
 
     public Double call() throws Exception {
+        final StatusWriter statusWriter = statusWriterSupplier.get();
         final List<Resource> resources = newArrayList();
         final List<Task> tasks = newLinkedList();
         final List<Task> runningTasks = newCopyOnWriteArrayList();
@@ -78,6 +85,7 @@ public class Simulator implements Callable<Double> {
             final Variables.MapReduceJob mapReduceJob = variables.getMapReduceJob();
             final TaskNodeAllocator allocator = variables.getTaskNodeAllocator();
             final Map<TaskId, NodeId> taskToNode;
+            final Status status = new Status();
             int numSkipped = 0;
             
             System.out.printf("START.  Time=%s, EndTime=%s%n", currentTime, totalTime);
@@ -208,6 +216,21 @@ public class Simulator implements Callable<Double> {
                     numSkipped);
             System.out.println();
             
+            
+            status.setTime(time);
+            status.setNumNodes(variables.getNodeIds().size());
+            status.setNumFailedNodes(variables.getNodeIds().size() - cluster.getNodesById().size());
+            status.setNumDataBlocks(variables.getDataBlockIds().size());
+            status.setNumMRTasks(numMRTasksCompleted.get());
+            status.setNumReplicaTasks(numReplicateTasksCompleted.get());
+            status.setReplicaCount(new HashMap<DataBlockId,Integer>(cluster.getDataBlockCount()));
+            for(DataBlockId dataBlockId : difference(variables.getDataBlockIds(), cluster.getDataBlockCount().keySet())) {
+                status.getReplicaCount().put(dataBlockId, 0);
+            }
+            
+            statusWriter.write(status);
+            
+            
             if(
                     tasks.isEmpty() && 
                     numMRTasksRunning.get() == 0 && 
@@ -228,6 +251,8 @@ public class Simulator implements Callable<Double> {
         }
         
         System.out.printf("%s\t\t%s%n", 0, difference(variables.getDataBlockIds(),cluster.getDataBlocksById().keySet()).size());
+        
+        statusWriter.close();
         
         return currentTime;
     }

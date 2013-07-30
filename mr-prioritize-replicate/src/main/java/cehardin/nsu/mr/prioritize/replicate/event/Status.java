@@ -6,6 +6,7 @@ package cehardin.nsu.mr.prioritize.replicate.event;
 
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import com.google.common.collect.Maps;
+import java.util.Date;
 import java.util.Map;
 
 /**
@@ -20,6 +21,14 @@ public class Status {
     private Map<DataBlockId, Integer> replicaCount = Maps.newHashMap();
     private int numMRTasks;
     private int numReplicaTasks;
+
+    public long getTime() {
+        return time;
+    }
+
+    public void setTime(long time) {
+        this.time = time;
+    }
 
     public int getNumNodes() {
         return numNodes;
