@@ -217,7 +217,7 @@ public class Simulator implements Callable<Double> {
             System.out.println();
             
             
-            status.setTime(time);
+            status.setTime((long)currentTime);
             status.setNumNodes(variables.getNodeIds().size());
             status.setNumFailedNodes(variables.getNodeIds().size() - cluster.getNodesById().size());
             status.setNumDataBlocks(variables.getDataBlockIds().size());

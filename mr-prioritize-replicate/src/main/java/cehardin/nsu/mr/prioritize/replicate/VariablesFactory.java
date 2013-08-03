@@ -94,7 +94,7 @@ public class VariablesFactory implements Supplier<Variables>{
         final Function<NodeId, RackId> nodeToRackFunction;
         final Function<DataBlockId, Set<NodeId>> dataBlockToNodesFunction;
         final TaskNodeAllocator taskNodeAllocator = new StandardTaskNodeAllocator();
-        final ReplicateTaskScheduler replicateTaskScheduler = new StandardReplicateTaskScheduler();
+        final ReplicateTaskScheduler replicateTaskScheduler = new StandardReplicateTaskScheduler(random);
         final Set<TaskId> taskIds = newHashSet();
         final Map<TaskId, DataBlockId> taskToDataBlock = newHashMap();
         final Variables.MapReduceJob mapReduceJob;

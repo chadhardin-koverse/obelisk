@@ -4,35 +4,17 @@
  */
 package cehardin.nsu.mr.prioritize.replicate;
 
-import static com.google.common.collect.Sets.newHashSet;
-import static com.google.common.collect.Sets.newTreeSet;
-import static com.google.common.collect.Maps.newHashMap;
-import static com.google.common.collect.Multimaps.newMultimap;
-import static com.google.common.collect.Maps.transformValues;
-import static java.lang.String.format;
-import static com.google.common.base.Functions.forMap;
-import static cehardin.nsu.mr.prioritize.replicate.Util.pickRandom;
-import static cehardin.nsu.mr.prioritize.replicate.Util.pickRandomPercentage;
 
 import cehardin.nsu.mr.prioritize.replicate.Variables.Bandwidth;
-import cehardin.nsu.mr.prioritize.replicate.Variables.MapReduceJob;
-import cehardin.nsu.mr.prioritize.replicate.hardware.Cluster;
-import cehardin.nsu.mr.prioritize.replicate.hardware.ClusterBuilder;
-import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
-import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
-import cehardin.nsu.mr.prioritize.replicate.id.RackId;
-import cehardin.nsu.mr.prioritize.replicate.id.TaskId;
-import com.google.common.base.Function;
-import com.google.common.collect.HashBiMap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.HashMultimap;
-import java.util.Collection;
-import java.util.Map;
+import cehardin.nsu.mr.prioritize.replicate.event.CsvStatusWriterSupplier;
+import cehardin.nsu.mr.prioritize.replicate.event.DateSequenceFileSupplier;
+import cehardin.nsu.mr.prioritize.replicate.event.FileWriterSupplier;
+import cehardin.nsu.mr.prioritize.replicate.event.StatusWriter;
+import com.google.common.base.Supplier;
+import java.io.File;
+import java.io.Writer;
+import java.util.Date;
 import java.util.Random;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -49,9 +31,15 @@ public class App implements Runnable {
     @Override
     public void run() {
         try {
-            final Simulator simulator = new Simulator(variables);
+            final File outputDir = new File(System.getProperty("user.home"), "mapreduce-simulation");
+            outputDir.mkdirs();
+            final Supplier<File> fileSupplier = new DateSequenceFileSupplier(outputDir, "mapreduce-simulation", "csv", new Date(), 1);
+            final Supplier<Writer> writerSupplier = new FileWriterSupplier(fileSupplier);
+            final Supplier<StatusWriter> statusWriterSupplier = new CsvStatusWriterSupplier(writerSupplier);
+            final Simulator simulator = new Simulator(variables, statusWriterSupplier);
             final double time = simulator.call();
             System.out.printf("Elapsed time: %s%n", time);
+            System.out.printf("Output is at %s%n", outputDir.getCanonicalPath());
         }   
         catch(Exception e) {
             throw new RuntimeException("Failed", e);

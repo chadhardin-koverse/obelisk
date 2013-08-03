@@ -141,26 +141,25 @@ public class Cluster {
         return unmodifiableMap(nodeMap);
     }
 
-    public Rack pickRandomRack() {
-        final Random random = new Random();
-        final int offset = random.nextInt(getRacks().size());
-        final Iterator<Rack> rackIterator = getRacks().iterator();
-
-        for (int i = 0; i < offset; i++) {
-            rackIterator.next();
-        }
-
-        return rackIterator.next();
-    }
-
-    public Rack pickRandomNodeNot(Rack rack) {
-        Rack randomRack;
-        do {
-            randomRack = pickRandomRack();
-        } while (randomRack == rack);
-
-        return randomRack;
-    }
+//    public Rack pickRandomRack(Random random) {
+//        final int offset = random.nextInt(getRacks().size());
+//        final Iterator<Rack> rackIterator = getRacks().iterator();
+//
+//        for (int i = 0; i < offset; i++) {
+//            rackIterator.next();
+//        }
+//
+//        return rackIterator.next();
+//    }
+//
+//    public Rack pickRandomNodeNot(Random random, Rack rack) {
+//        Rack randomRack;
+//        do {
+//            randomRack = pickRandomRack(random);
+//        } while (randomRack == rack);
+//
+//        return randomRack;
+//    }
 
     public Rack findRackOfNode(final NodeId nodeId) {
         return find(getRacks(), rackContainsNode(nodeId));

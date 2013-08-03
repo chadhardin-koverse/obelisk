@@ -160,27 +160,27 @@ public class Rack extends AbstractHardware<RackId> {
         return unmodifiableSortedMap(result);
     }
 
-    public Node pickRandomNode() {
-        final Random random = new Random();
-        final int offset = random.nextInt(getNodes().size());
-        final Iterator<Node> nodeIterator = getNodes().iterator();
-
-        for (int i = 0; i < offset; i++) {
-            nodeIterator.next();
-        }
-
-        return nodeIterator.next();
-    }
-
-    public Node pickRandomNodeNot(Node node) {
-        Node randomNode;
-        do {
-            randomNode = pickRandomNode();
-        } while (randomNode == node);
-
-        return randomNode;
-
-    }
+//    public Node pickRandomNode() {
+//        final Random random = new Random();
+//        final int offset = random.nextInt(getNodes().size());
+//        final Iterator<Node> nodeIterator = getNodes().iterator();
+//
+//        for (int i = 0; i < offset; i++) {
+//            nodeIterator.next();
+//        }
+//
+//        return nodeIterator.next();
+//    }
+//
+//    public Node pickRandomNodeNot(Node node) {
+//        Node randomNode;
+//        do {
+//            randomNode = pickRandomNode();
+//        } while (randomNode == node);
+//
+//        return randomNode;
+//
+//    }
 
     public Set<Node> findNodesOfDataBlockId(final DataBlockId dataBlockId) {
         return unmodifiableSet(filter(getNodes(), nodeContainsDataBlock(dataBlockId)));

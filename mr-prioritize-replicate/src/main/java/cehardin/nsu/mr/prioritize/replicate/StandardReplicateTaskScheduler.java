@@ -10,6 +10,7 @@ import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -20,7 +21,12 @@ import java.util.logging.Logger;
 public class StandardReplicateTaskScheduler implements ReplicateTaskScheduler {
 
     private final Logger logger = Logger.getLogger(getClass().getSimpleName());
+    private final Random random;
 
+    public StandardReplicateTaskScheduler(Random random) {
+        this.random = random;
+    }
+    
     public List<ReplicateTask> schedule(Cluster cluster) {
         final List<ReplicateTask> tasks = newArrayList();
 
@@ -39,11 +45,11 @@ public class StandardReplicateTaskScheduler implements ReplicateTaskScheduler {
                 if (count == 1) {
                     toRack = fromRack;
                 } else {
-                    toRack = cluster.pickRandomNodeNot(fromRack);
+                    toRack = Util.pickRandom(random, cluster.getRacks(), fromRack);
                 }
 
                 if (!toRack.getNodes().isEmpty()) {
-                    toNode = toRack.pickRandomNode();
+                    toNode = Util.pickRandom(random, toRack.getNodes());
 
                     tasks.add(new ReplicateTask(dataBlock, cluster, fromRack, toRack, fromNode, toNode));
                 }
