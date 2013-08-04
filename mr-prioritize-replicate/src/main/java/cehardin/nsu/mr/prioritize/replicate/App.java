@@ -122,10 +122,10 @@ public class App implements Runnable {
         numDataBlocks = numNodes * 100;
         maxConcurrentTasks = numNodes * 4;
         maxTasksPerNode = 2;
-        nodePercentageFailed1 = 0.05;
-        nodePercentageFailed2 = 0.05;
-        nodeFail2Time = TimeUnit.SECONDS.toMillis(10);
-        numTasks = numNodes * 100;
+        nodePercentageFailed1 = 0.20;
+        nodePercentageFailed2 = 0.20;
+        nodeFail2Time = TimeUnit.SECONDS.toMillis(15);
+        numTasks = numNodes * 10;
         
         VariablesFactory variablesFactory = new VariablesFactory(
                 random, 

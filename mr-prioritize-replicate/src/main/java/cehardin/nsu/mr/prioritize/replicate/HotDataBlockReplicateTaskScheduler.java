@@ -33,16 +33,22 @@ import java.util.concurrent.Future;
  *
  * @author Chad
  */
-public class HotDataBlockReplicateTaskScheduler implements ReplicateTaskScheduler {
-
-    private final Random random;
+public class HotDataBlockReplicateTaskScheduler extends AbstractReplicateTaskScheduler {
+    
     private final SortedMap<Double, Set<DataBlockId>> tempToDataBlockIds;
     private final Map<DataBlockId, Double> dataBlockIdToTemp;
-    private final ExecutorService executorService;
+    private final Comparator<DataBlockId> comparator = new Comparator<DataBlockId>() {
+            @Override
+            public int compare(DataBlockId db1, DataBlockId db2) {
+                final double t1 = dataBlockIdToTemp.get(db1);
+                final double t2 = dataBlockIdToTemp.get(db2);
+
+                return t1 > t2 ? 1 : t2 > t1 ? -1 : 0;
+            }
+        };
 
     public HotDataBlockReplicateTaskScheduler(Random random, ExecutorService executorService, Map<DataBlockId, Double> dataBlockIdToTemp) {
-        this.random = random;
-        this.executorService = executorService;
+        super(random, executorService);
         this.dataBlockIdToTemp = newHashMap(dataBlockIdToTemp);
         this.tempToDataBlockIds = newTreeMap();
 
@@ -59,87 +65,8 @@ public class HotDataBlockReplicateTaskScheduler implements ReplicateTaskSchedule
     }
 
     @Override
-    public List<ReplicateTask> schedule(final Cluster cluster, final int maxTasks, final Iterable<ReplicateTask> runningTasks) {
-        final List<ReplicateTask> tasks = newArrayList();
-        final Set<DataBlockId> workingDataBlocks = newHashSet(transform(runningTasks, extractDataBlockIdFromReplicateTask()));
-        final Comparator<DataBlockId> comparator = new Comparator<DataBlockId>() {
-            @Override
-            public int compare(DataBlockId db1, DataBlockId db2) {
-                final double t1 = dataBlockIdToTemp.get(db1);
-                final double t2 = dataBlockIdToTemp.get(db2);
-
-                return t1 > t2 ? 1 : t2 > t1 ? -1 : 0;
-            }
-        };
-        final List<DataBlockId> one = new ArrayList<>();
-        final List<DataBlockId> two = new ArrayList<>();
-        final List<Future<ReplicateTask>> oneFutures = new ArrayList<>();
-        final List<Future<ReplicateTask>> twoFutures = new ArrayList<>();
-        
-        for (final Map.Entry<DataBlockId, Integer> countEntry : cluster.getDataBlockCount().entrySet()) {
-            final DataBlockId dataBlockId = countEntry.getKey();
-            final int count = countEntry.getValue();
-
-            if (count < 3 && !workingDataBlocks.contains(dataBlockId)) {
-                if (count == 1) {
-                    one.add(dataBlockId);
-                } else {
-                    two.add(dataBlockId);
-                }
-            }
-        }
-
-        Collections.sort(one, comparator);
-        Collections.sort(two, comparator);
-
-        for (final DataBlockId dataBlockId : one) {
-            oneFutures.add(executorService.submit(new Callable<ReplicateTask>() {
-                @Override
-                public ReplicateTask call() throws Exception {
-                    final Set<Rack> racksContainingDataBlock = cluster.findRacksOfDataBlock(dataBlockId);
-                    final Rack rack = racksContainingDataBlock.iterator().next();
-                    final Node fromNode = rack.findNodesOfDataBlockId(dataBlockId).iterator().next();
-                    final DataBlock dataBlock = fromNode.getDataBlockById().get(dataBlockId);
-                    final Node toNode = Util.pickRandom(random, rack.getNodes(), fromNode);
-
-                    return new ReplicateTask(dataBlock, cluster, rack, rack, fromNode, toNode);
-                }
-            }));
-            
-            if((oneFutures.size() + twoFutures.size()) >= maxTasks) {
-                break;
-            }
-        }
-
-
-        for (final DataBlockId dataBlockId : two) {
-            twoFutures.add(executorService.submit(new Callable<ReplicateTask>() {
-                @Override
-                public ReplicateTask call() throws Exception {
-                    final Set<Rack> racksContainingDataBlock = cluster.findRacksOfDataBlock(dataBlockId);
-                    final Rack fromRack = racksContainingDataBlock.iterator().next();
-                    final Node fromNode = fromRack.findNodesOfDataBlockId(dataBlockId).iterator().next();
-                    final DataBlock dataBlock = fromNode.getDataBlockById().get(dataBlockId);
-                    final Rack toRack = Util.pickRandom(random, cluster.getRacks(), fromRack);
-                    final Node toNode = Util.pickRandom(random, toRack.getNodes());
-
-                    return new ReplicateTask(dataBlock, cluster, fromRack, toRack, fromNode, toNode);
-                }
-            }));
-            
-            if((oneFutures.size() + twoFutures.size()) >= maxTasks) {
-                break;
-            }
-        }
-
-        for (final Future<ReplicateTask> oneFuture : oneFutures) {
-            tasks.add(Futures.getUnchecked(oneFuture));
-        }
-
-        for (final Future<ReplicateTask> twoFuture : twoFutures) {
-            tasks.add(Futures.getUnchecked(twoFuture));
-        }
-
-        return Collections.unmodifiableList(tasks);
+    protected void sort(List<DataBlockId> oneCopy, List<DataBlockId> twoCopies) {
+        Collections.sort(oneCopy, comparator);
+        Collections.sort(twoCopies, comparator);
     }
 }

@@ -1,5 +1,8 @@
 package cehardin.nsu.mr.prioritize.replicate.task;
 
+import static com.google.common.collect.Lists.newArrayList;
+import static java.util.Collections.unmodifiableList;
+
 import cehardin.nsu.mr.prioritize.replicate.DataBlock;
 import cehardin.nsu.mr.prioritize.replicate.hardware.Cluster;
 import cehardin.nsu.mr.prioritize.replicate.hardware.Node;
@@ -43,8 +46,46 @@ public class ReplicateTask implements Task {
             return replicateTask.dataBlock.getId();
         }
     }
+    
+    private static class ExtractFromNode implements Function<ReplicateTask, Node> {
+        @Override
+        public Node apply(ReplicateTask replicateTask) {
+            return replicateTask.fromNode;
+        }
+    }
+    
+    private static class ExtractToNode implements Function<ReplicateTask, Node> {
+        @Override
+        public Node apply(ReplicateTask replicateTask) {
+            return replicateTask.toNode;
+        }
+    }
+    
+    private static class ExtractNodes implements Function<ReplicateTask, Iterable<Node>> {
+        @Override
+        public Iterable<Node> apply(ReplicateTask replicateTask) {
+            return unmodifiableList(newArrayList(replicateTask.fromNode, replicateTask.toNode));
+        }
+    }
+    
+    private static class ReliesOnNode implements Predicate<ReplicateTask> {
+        private final Node node;
+        
+        public ReliesOnNode(final Node node) {
+            this.node = node;
+        }
+        
+        @Override
+        public boolean apply(final ReplicateTask replicateTask) {
+            return replicateTask.fromNode.equals(node) || replicateTask.toNode.equals(node);
+        }
+    }
+    
 
     private static final ExtractDataBlockId EXTRACT_DATA_BLOCK_ID = new ExtractDataBlockId();
+    private static final ExtractFromNode EXTRACT_FROM_NODE = new ExtractFromNode();
+    private static final ExtractToNode EXTRACT_TO_NODE = new ExtractToNode();
+    private static final ExtractNodes EXTRACT_NODES = new ExtractNodes();
     
     public static Predicate<Task> replicateTaskSameBlock(final ReplicateTask replicateTask) {
         return new SameBlock(replicateTask.dataBlock.getId());
@@ -52,6 +93,22 @@ public class ReplicateTask implements Task {
     
     public static Function<ReplicateTask, DataBlockId> extractDataBlockIdFromReplicateTask() {
         return EXTRACT_DATA_BLOCK_ID;
+    }
+    
+    public static Function<ReplicateTask, Node> extractFromNodeFromReplicateTask() {
+        return EXTRACT_FROM_NODE;
+    }
+    
+    public static Function<ReplicateTask, Node> extractToNodeFromReplicateTask() {
+        return EXTRACT_TO_NODE;
+    }
+    
+    public static Function<ReplicateTask, Iterable<Node>> extractNodesFromReplicateTask() {
+        return EXTRACT_NODES;
+    }
+    
+    public static Predicate<ReplicateTask> replicateTaskReliesOnNode(final Node node) {
+        return new ReliesOnNode(node);
     }
     
     private final DataBlock dataBlock;
