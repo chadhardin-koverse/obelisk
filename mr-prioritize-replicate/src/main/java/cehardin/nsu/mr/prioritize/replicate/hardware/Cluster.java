@@ -23,12 +23,19 @@ import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.MoreExecutors;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -176,14 +183,14 @@ public class Cluster {
     }
 
     public Set<Rack> findRacksOfDataBlock(final DataBlockId dataBlockId) {
-        final Set<Rack> found = newHashSet();
-
+        final Set<Rack> found = Sets.newCopyOnWriteArraySet();
+        
         for (final Rack rack : getRacks()) {
-            if(rack.getDataBlocksById().containsKey(dataBlockId)) {
+            if(rack.hasDataBlock(dataBlockId)) {
                 found.add(rack);
             }
         }
-
+        
         return unmodifiableSet(found);
     }
 

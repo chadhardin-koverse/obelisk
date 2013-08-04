@@ -2,11 +2,15 @@ package cehardin.nsu.mr.prioritize.replicate.hardware;
 
 import static com.google.common.collect.Iterables.transform;
 import static com.google.common.collect.Iterables.concat;
+import static com.google.common.collect.Iterables.any;
+import static com.google.common.base.Functions.compose;
+import static com.google.common.base.Predicates.equalTo;
 import static com.google.common.collect.Maps.uniqueIndex;
 import static com.google.common.collect.Maps.newHashMap;
 import static com.google.common.collect.Maps.newTreeMap;
 import static cehardin.nsu.mr.prioritize.replicate.hardware.Node.extractDataBlocksFromNode;
 import static cehardin.nsu.mr.prioritize.replicate.hardware.Node.nodeContainsDataBlock;
+import static cehardin.nsu.mr.prioritize.replicate.DataBlock.extractIdFromDataBlock;
 import static com.google.common.collect.Sets.newHashSet;
 import static com.google.common.collect.Sets.filter;
 import static java.util.Collections.unmodifiableMap;
@@ -21,6 +25,7 @@ import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -86,6 +91,27 @@ public class Rack extends AbstractHardware<RackId> {
 
     public Set<DataBlock> getDataBlocks() {
         return newHashSet(concat(transform(getNodes(), extractDataBlocksFromNode())));
+    }
+    
+    public Set<DataBlockId> getDataBlockIds() {
+        final Set<DataBlockId> dataBlockIds = newHashSet();
+        
+        for(final Node node : getNodes()) {
+            Iterables.addAll(dataBlockIds, node.getDataBlockIds());
+        }
+        
+        return unmodifiableSet(dataBlockIds);
+    }
+    
+    public boolean hasDataBlock(final DataBlockId dataBlockId) {
+        return any(
+                transform(
+                    concat(
+                        transform(
+                            getNodes(), 
+                            extractDataBlocksFromNode())),
+                    extractIdFromDataBlock()),
+                equalTo(dataBlockId));
     }
 
     public Map<DataBlockId, Set<DataBlock>> getDataBlocksById() {

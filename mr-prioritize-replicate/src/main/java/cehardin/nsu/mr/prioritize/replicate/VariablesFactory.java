@@ -18,10 +18,12 @@ import static com.google.common.collect.Maps.transformValues;
 import com.google.common.collect.Multimap;
 import static com.google.common.collect.Sets.newHashSet;
 import static com.google.common.collect.Sets.newTreeSet;
+import static com.google.common.collect.Lists.newArrayList;
 import static java.lang.String.format;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -87,19 +89,21 @@ public class VariablesFactory implements Supplier<Variables>{
         final int nodesPerRack = numNodes / numRacks;
         final Set<RackId> rackIds = newHashSet();
         final Set<NodeId> nodeIds = newHashSet();
-        final Set<DataBlockId> dataBlockIds = newHashSet();
+        final List<DataBlockId> dataBlockIds = newArrayList();
         final Map<NodeId, RackId> nodeToRack = newHashMap();
         final Multimap<RackId, NodeId> rackToNodes = HashMultimap.create();
         final Multimap<DataBlockId, NodeId> dataBlockToNodes = HashMultimap.create();
+        final Map<NodeId, Set<DataBlockId>> nodeToDataBlocks = new HashMap<>();
         final Function<NodeId, RackId> nodeToRackFunction;
         final Function<DataBlockId, Set<NodeId>> dataBlockToNodesFunction;
+        final Function<NodeId, Set<DataBlockId>> nodeToDataBlocksFunction;
         final TaskNodeAllocator taskNodeAllocator = new StandardTaskNodeAllocator();
-        final ReplicateTaskScheduler replicateTaskScheduler = new StandardReplicateTaskScheduler(random);
         final Set<TaskId> taskIds = newHashSet();
         final Map<TaskId, DataBlockId> taskToDataBlock = newHashMap();
         final Variables.MapReduceJob mapReduceJob;
         
         //create racks and nodes
+        System.out.printf("Creating %s racks with %s nodes per rack%n", numRacks, nodesPerRack);
         for(int r=1; r <= numRacks; r++) {
             final RackId rackId = new RackId(format("r-%s",r));
             rackIds.add(rackId);
@@ -112,12 +116,18 @@ public class VariablesFactory implements Supplier<Variables>{
         }
         
         //create data blocks
+        System.out.printf("Creating %s data blocks%n", numDataBlocks);
         for(int d=1; d <= numDataBlocks; d++) {
             final DataBlockId dataBlockId = new DataBlockId(format("d-%s", d));
             dataBlockIds.add(dataBlockId);
         }
         
+        for(final NodeId nodeId : nodeIds) {
+            nodeToDataBlocks.put(nodeId, new HashSet<DataBlockId>());
+        }
+        
         //assign data blocks to nodes
+        System.out.printf("Assigning data blocks to nodes%n");
         for(final DataBlockId dataBlockId : dataBlockIds) {
             final RackId rack1 = pickRandom(random, rackIds);
             final RackId rack2 = pickRandom(random, rackIds, rack1);
@@ -128,32 +138,57 @@ public class VariablesFactory implements Supplier<Variables>{
             dataBlockToNodes.put(dataBlockId, node1);
             dataBlockToNodes.put(dataBlockId, node2);
             dataBlockToNodes.put(dataBlockId, node3);
+            nodeToDataBlocks.get(node1).add(dataBlockId);
+            nodeToDataBlocks.get(node2).add(dataBlockId);
+            nodeToDataBlocks.get(node3).add(dataBlockId);
         }
         
         //create the MR tasks
+        System.out.printf("Creating %s MR tasks%n", numTasks);
         for(int i=0; i < numTasks; i++) {
             final TaskId taskId = new TaskId(format("t-%s", i));
             taskIds.add(taskId);
         }
         
         //assign data blocks to the MR task
-        for(final TaskId taskId : taskIds) {
-            final DataBlockId dataBlockId = pickRandom(random, dataBlockIds);
-            taskToDataBlock.put(taskId, dataBlockId);
+        {
+            int percentDone = 0;
+            System.out.printf("Assigning data blocks to MR tasks%n");
+            System.out.printf("%s%%, ", percentDone);
+            
+            for(final TaskId taskId : taskIds) {
+                final DataBlockId dataBlockId = pickRandom(random, dataBlockIds);
+                final int newPercentDone;
+                    
+                taskToDataBlock.put(taskId, dataBlockId);
+                newPercentDone = (taskToDataBlock.size() * 100 )/ taskIds.size();
+                
+                if(newPercentDone != percentDone) {
+                    percentDone = newPercentDone;
+                    System.out.printf("%s%%, ", percentDone);
+                }
+            }
+            
+            System.out.printf("%n");
         }
         
         mapReduceJob = new Variables.MapReduceJob(5, TimeUnit.SECONDS, taskIds, forMap(taskToDataBlock));
         
         nodeFailures = newTreeSet();
         
-        //first failuers
-        for(final NodeId failedNode : Util.pickRandomPercentage(random, nodeIds, nodePercentageFailed1)) {
-            final Variables.NodeFailure nodeFailure = new Variables.NodeFailure(failedNode, 0, TimeUnit.MINUTES);
-            nodeFailures.add(nodeFailure);
-            failedNodeIds.add(failedNode);
+        //first failueres
+        {
+            System.out.printf("Creating first failures (%s%%)%n", nodePercentageFailed1 * 100);
+            for(final NodeId failedNode : Util.pickRandomPercentage(random, nodeIds, nodePercentageFailed1)) {
+                final Variables.NodeFailure nodeFailure = new Variables.NodeFailure(failedNode, 0, TimeUnit.MINUTES);
+                
+                nodeFailures.add(nodeFailure);
+                failedNodeIds.add(failedNode);
+            }
         }
         
         //second failuers
+        System.out.printf("Creating second failures (%s%%) after %s ms%n", nodePercentageFailed2 * 100, nodeFailed2Time);
         for(final NodeId failedNode : Util.pickRandomPercentage(random, nodeIds, failedNodeIds, nodePercentageFailed2)) {
             final Variables.NodeFailure nodeFailure = new Variables.NodeFailure(failedNode, nodeFailed2Time, TimeUnit.MILLISECONDS);
             nodeFailures.add(nodeFailure);
@@ -171,6 +206,8 @@ public class VariablesFactory implements Supplier<Variables>{
             }            
         }));
         
+        nodeToDataBlocksFunction = forMap(nodeToDataBlocks);
+        
         return new Variables(
                 diskBadwidth, 
                 rackBandwidth, 
@@ -181,11 +218,11 @@ public class VariablesFactory implements Supplier<Variables>{
                 nodeFailures, 
                 rackIds, 
                 nodeIds, 
-                dataBlockIds, 
+                newHashSet(dataBlockIds), 
                 nodeToRackFunction, 
                 dataBlockToNodesFunction, 
+                nodeToDataBlocksFunction,
                 taskNodeAllocator, 
-                replicateTaskScheduler, 
                 mapReduceJob);
     }
 }

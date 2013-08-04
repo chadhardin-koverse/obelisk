@@ -11,19 +11,20 @@ import com.google.common.collect.ComparisonChain;
 public abstract class AbstractId implements Id {
 
     private final String value;
+    private final int hashCode;
 
     protected AbstractId(final String value) {
         Preconditions.checkNotNull(value, "value must not be null");
         Preconditions.checkArgument(!value.trim().isEmpty(), "value must not be empty");
         this.value = value.trim();
+        this.hashCode = value.hashCode();
     }
 
+    @Override
     public final String getValue() {
         return value;
     }
 
-    
-    
     @Override
     public int compareTo(Id o) {
         return ComparisonChain.start().compare(value, o.getValue()).result();
@@ -31,7 +32,7 @@ public abstract class AbstractId implements Id {
     
     @Override
     public final int hashCode() {
-        return Objects.hashCode(getClass(), getValue());
+        return hashCode;
     }
 
     @Override
@@ -42,8 +43,8 @@ public abstract class AbstractId implements Id {
             equal = true;
         } else if (o == null) {
             equal = false;
-        } else if (o instanceof AbstractId) {
-            final AbstractId other = (AbstractId) o;
+        } else if (AbstractId.class.isInstance(o)) {
+            final AbstractId other = AbstractId.class.cast(o);
                 equal = value.equals(other.value);
         } else {
             equal = false;

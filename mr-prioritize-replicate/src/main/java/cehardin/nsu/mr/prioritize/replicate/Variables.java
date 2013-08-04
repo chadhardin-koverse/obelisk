@@ -1,5 +1,10 @@
 package cehardin.nsu.mr.prioritize.replicate;
 
+import static com.google.common.collect.Sets.newHashSet;
+import static com.google.common.collect.Sets.newTreeSet;
+import static java.util.Collections.unmodifiableSet;
+import static java.util.Collections.unmodifiableSortedSet;
+
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import cehardin.nsu.mr.prioritize.replicate.id.RackId;
@@ -8,6 +13,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.collect.ComparisonChain;
 import java.io.Serializable;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
@@ -18,7 +24,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class Variables implements Serializable {
 
-    public static class NodeFailure implements Comparable<NodeFailure> {
+    public static class NodeFailure implements Comparable<NodeFailure>, Cloneable {
 
         private final NodeId nodeId;
         private final long time;
@@ -68,9 +74,14 @@ public class Variables implements Serializable {
             
             return equal;
         }
+        
+        @Override
+        public NodeFailure clone() {
+            return this;
+        }
     }
 
-    public static class Bandwidth {
+    public static class Bandwidth implements Cloneable {
 
         private final long bytes;
         private final long time;
@@ -100,9 +111,14 @@ public class Variables implements Serializable {
 
             return bytesPerMs;
         }
+        
+        @Override
+        public Bandwidth clone() {
+            return this;
+        }
     }
 
-    public static class MapReduceJob {
+    public static class MapReduceJob implements Cloneable {
 
         private final long startTime;
         private final TimeUnit timeUnit;
@@ -112,7 +128,7 @@ public class Variables implements Serializable {
         public MapReduceJob(long startTime, TimeUnit timeUnit, Set<TaskId> taskIds, Function<TaskId, DataBlockId> taskIdToDataBlockId) {
             this.startTime = startTime;
             this.timeUnit = timeUnit;
-            this.taskIds = taskIds;
+            this.taskIds = newHashSet(taskIds);
             this.taskIdToDataBlockId = taskIdToDataBlockId;
         }
 
@@ -131,6 +147,11 @@ public class Variables implements Serializable {
         public Function<TaskId, DataBlockId> getTaskIdToDataBlockId() {
             return taskIdToDataBlockId;
         }
+        
+        @Override
+        public MapReduceJob clone() {
+            return new MapReduceJob(startTime, timeUnit, taskIds, taskIdToDataBlockId);
+        }
     }
     private final Bandwidth diskBandwidth;
     private final Bandwidth rackBandwidth;
@@ -144,8 +165,8 @@ public class Variables implements Serializable {
     private final Set<DataBlockId> dataBlockIds;
     private final Function<NodeId, RackId> nodeIdToRackId;
     private final Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds;
+    private final Function<NodeId, Set<DataBlockId>> nodeIdToDataBlockIds;
     private final TaskNodeAllocator taskNodeAllocator;
-    private final ReplicateTaskScheduler replicateTaskScheduler;
     private final MapReduceJob mapReduceJob;
 
     public Variables(
@@ -161,8 +182,8 @@ public class Variables implements Serializable {
             Set<DataBlockId> dataBlockIds,
             Function<NodeId, RackId> nodeIdToRackId,
             Function<DataBlockId, Set<NodeId>> dataBlockIdToNodeIds,
+            Function<NodeId, Set<DataBlockId>> nodeIdsToDataBlockIds,
             TaskNodeAllocator taskNodeAllocator,
-            ReplicateTaskScheduler replicateTaskScheduler,
             MapReduceJob mapReduceJob) {
         this.diskBandwidth = diskBandwidth;
         this.rackBandwidth = rackBandwidth;
@@ -170,15 +191,15 @@ public class Variables implements Serializable {
         this.blockSize = blockSize;
         this.maxConcurrentTasks = maxConcurrentTasks;
         this.maxTasksPerNode = maxTasksPerNode;
-        this.nodeFailures = nodeFailures;
-        this.rackIds = rackIds;
-        this.nodeIds = nodeIds;
-        this.dataBlockIds = dataBlockIds;
+        this.nodeFailures = unmodifiableSortedSet(newTreeSet(nodeFailures));
+        this.rackIds = unmodifiableSet(newHashSet(rackIds));
+        this.nodeIds = unmodifiableSet(newHashSet(nodeIds));
+        this.dataBlockIds = unmodifiableSet(newHashSet(dataBlockIds));
         this.nodeIdToRackId = nodeIdToRackId;
         this.dataBlockIdToNodeIds = dataBlockIdToNodeIds;
+        this.nodeIdToDataBlockIds = nodeIdsToDataBlockIds;
         this.taskNodeAllocator = taskNodeAllocator;
-        this.replicateTaskScheduler = replicateTaskScheduler;
-        this.mapReduceJob = mapReduceJob;
+        this.mapReduceJob = mapReduceJob.clone();
     }
 
     public Bandwidth getDiskBandwidth() {
@@ -229,15 +250,35 @@ public class Variables implements Serializable {
         return dataBlockIdToNodeIds;
     }
 
+    public Function<NodeId, Set<DataBlockId>> getNodeIdToDataBlockIds() {
+        return nodeIdToDataBlockIds;
+    }
+
     public TaskNodeAllocator getTaskNodeAllocator() {
         return taskNodeAllocator;
     }
 
-    public ReplicateTaskScheduler getReplicateTaskScheduler() {
-        return replicateTaskScheduler;
-    }
-
     public MapReduceJob getMapReduceJob() {
         return mapReduceJob;
+    }
+    
+    @Override
+    public Variables clone() {
+        return new Variables(
+                diskBandwidth, 
+                rackBandwidth, 
+                clusterBandwidth, 
+                blockSize, 
+                maxConcurrentTasks, 
+                maxTasksPerNode, 
+                nodeFailures, 
+                rackIds, 
+                nodeIds, 
+                dataBlockIds, 
+                nodeIdToRackId, 
+                dataBlockIdToNodeIds, 
+                nodeIdToDataBlockIds, 
+                taskNodeAllocator, 
+                mapReduceJob);
     }
 }

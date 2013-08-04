@@ -7,40 +7,53 @@ import cehardin.nsu.mr.prioritize.replicate.hardware.Rack;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import cehardin.nsu.mr.prioritize.replicate.id.RackId;
+import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Lists;
 
 /**
  *
  * @author Chad
  */
 public class ReplicateTask implements Task {
-    private static class SameSource implements Predicate<Task> {
-        private final RackId fromRackId;
-        private final NodeId fromNodeId;
+
+    private static class SameBlock implements Predicate<Task> {
+
         private final DataBlockId dataBlockId;
 
-        public SameSource(RackId fromRackId, NodeId fromNodeId, DataBlockId dataBlockId) {
-            this.fromRackId = fromRackId;
-            this.fromNodeId = fromNodeId;
+        public SameBlock(DataBlockId dataBlockId) {
             this.dataBlockId = dataBlockId;
         }
 
         @Override
         public boolean apply(Task task) {
-            if(ReplicateTask.class.isInstance(task)) {
+            if (ReplicateTask.class.isInstance(task)) {
                 final ReplicateTask replicateTask = ReplicateTask.class.cast(task);
                 return Objects.equal(dataBlockId, replicateTask.dataBlock.getId());
-            }
-            else {
+            } else {
                 return false;
             }
         }
     }
     
-    public static Predicate<Task> replicateTaskSameSource(final ReplicateTask replicateTask) {
-        return new SameSource(replicateTask.fromRack.getId(), replicateTask.fromNode.getId(), replicateTask.dataBlock.getId());
+    private static class ExtractDataBlockId implements Function<ReplicateTask, DataBlockId> {
+        @Override
+        public DataBlockId apply(ReplicateTask replicateTask) {
+            return replicateTask.dataBlock.getId();
+        }
     }
+
+    private static final ExtractDataBlockId EXTRACT_DATA_BLOCK_ID = new ExtractDataBlockId();
+    
+    public static Predicate<Task> replicateTaskSameBlock(final ReplicateTask replicateTask) {
+        return new SameBlock(replicateTask.dataBlock.getId());
+    }
+    
+    public static Function<ReplicateTask, DataBlockId> extractDataBlockIdFromReplicateTask() {
+        return EXTRACT_DATA_BLOCK_ID;
+    }
+    
     private final DataBlock dataBlock;
     private final Cluster cluster;
     private final Rack fromRack;
@@ -68,33 +81,49 @@ public class ReplicateTask implements Task {
 
         fromNode.getDiskResource().consume(size, new Runnable() {
             public void run() {
-                fromRack.getNetworkResource().consume(size, new Runnable() {
-                    public void run() {
-                        if (fromRack.equals(toRack)) {
-                            toNode.getDiskResource().consume(size, new Runnable() {
-                                public void run() {
-                                    toNode.getDataBlocks().add(dataBlock);
-                                    callback.run();
-                                }
-                            });
-                        } else {
-                            cluster.getNetworkResource().consume(size, new Runnable() {
-                                public void run() {
-                                    toRack.getNetworkResource().consume(size, new Runnable() {
+                if (cluster.getNodesById().keySet().containsAll(Lists.newArrayList(fromNode.getId(), toNode.getId()))) {
+                    fromRack.getNetworkResource().consume(size, new Runnable() {
+                        public void run() {
+                            if (cluster.getNodesById().keySet().containsAll(Lists.newArrayList(fromNode.getId(), toNode.getId()))) {
+                                if (fromRack.equals(toRack)) {
+                                    toNode.getDiskResource().consume(size, new Runnable() {
                                         public void run() {
-                                            toNode.getDiskResource().consume(size, new Runnable() {
-                                                public void run() {
-                                                    toNode.getDataBlocks().add(dataBlock);
-                                                    callback.run();
-                                                }
-                                            });
+                                            toNode.getDataBlocks().add(dataBlock);
+                                            callback.run();
+                                        }
+                                    });
+                                } else {
+                                    cluster.getNetworkResource().consume(size, new Runnable() {
+                                        public void run() {
+                                            if (cluster.getNodesById().keySet().containsAll(Lists.newArrayList(fromNode.getId(), toNode.getId()))) {
+                                                toRack.getNetworkResource().consume(size, new Runnable() {
+                                                    public void run() {
+                                                        if (cluster.getNodesById().keySet().containsAll(Lists.newArrayList(fromNode.getId(), toNode.getId()))) {
+                                                            toNode.getDiskResource().consume(size, new Runnable() {
+                                                                public void run() {
+                                                                    toNode.getDataBlocks().add(dataBlock);
+                                                                    callback.run();
+                                                                }
+                                                            });
+                                                        } else {
+                                                            callback.run();
+                                                        }
+                                                    }
+                                                });
+                                            } else {
+                                                callback.run();
+                                            }
                                         }
                                     });
                                 }
-                            });
+                            } else {
+                                callback.run();
+                            }
                         }
-                    }
-                });
+                    });
+                } else {
+                    callback.run();
+                }
             }
         });
     }
@@ -102,35 +131,33 @@ public class ReplicateTask implements Task {
     @Override
     public int hashCode() {
         return Objects.hashCode(
-                dataBlock, 
-                fromNode, 
-                toNode, 
-                fromRack, 
+                dataBlock,
+                fromNode,
+                toNode,
+                fromRack,
                 toRack);
     }
-    
+
     @Override
     public boolean equals(Object o) {
         final boolean equal;
-        
-        if(this == o) {
+
+        if (this == o) {
             equal = true;
-        }
-        else if(getClass().isInstance(o)) {
+        } else if (getClass().isInstance(o)) {
             final ReplicateTask other = getClass().cast(o);
-            equal = Objects.equal(dataBlock, other.dataBlock) &&
-                    Objects.equal(fromNode, other.fromNode) &&
-                    Objects.equal(toNode, other.toNode) &&
-                    Objects.equal(fromRack, other.fromRack) &&
-                    Objects.equal(toRack, other.toRack);
-        }
-        else {
+            equal = Objects.equal(dataBlock, other.dataBlock)
+                    && Objects.equal(fromNode, other.fromNode)
+                    && Objects.equal(toNode, other.toNode)
+                    && Objects.equal(fromRack, other.fromRack)
+                    && Objects.equal(toRack, other.toRack);
+        } else {
             equal = false;
         }
-        
+
         return equal;
     }
-    
+
     @Override
     public String toString() {
         return Objects.toStringHelper(getClass()).

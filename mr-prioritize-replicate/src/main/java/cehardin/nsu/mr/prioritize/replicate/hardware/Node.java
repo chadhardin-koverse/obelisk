@@ -11,6 +11,8 @@ import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 import java.util.Map;
 import java.util.Set;
 
@@ -33,7 +35,7 @@ public class Node extends AbstractHardware<NodeId> {
             this.dataBlockId = dataBlockId1;
         }
         public boolean apply(Node node) {
-            return node.getDataBlockIds().contains(dataBlockId);
+            return node.hasDataBlock(dataBlockId);
         }
     }
     
@@ -64,8 +66,12 @@ public class Node extends AbstractHardware<NodeId> {
         return dataBlocks;
     }
     
-    public Set<DataBlockId> getDataBlockIds() {
-        return newHashSet(transform(getDataBlocks(), extractIdFromDataBlock()));
+    public Iterable<DataBlockId> getDataBlockIds() {
+        return transform(getDataBlocks(), extractIdFromDataBlock());
+    }
+    
+    public boolean hasDataBlock(final DataBlockId dataBlockId) {
+        return Iterables.any(getDataBlockIds(), Predicates.equalTo(dataBlockId));
     }
 
     public Map<DataBlockId, DataBlock> getDataBlockById() {

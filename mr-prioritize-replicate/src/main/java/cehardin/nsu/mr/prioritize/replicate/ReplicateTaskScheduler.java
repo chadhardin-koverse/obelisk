@@ -10,6 +10,5 @@ import java.util.List;
  */
 public interface ReplicateTaskScheduler {
 
-    List<ReplicateTask> schedule(
-            Cluster cluster);
+    List<ReplicateTask> schedule(Cluster cluster, int maxTasks, Iterable<ReplicateTask> runningTasks);
 }
