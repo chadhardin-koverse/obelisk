@@ -21,6 +21,9 @@ public class Status {
     private Map<DataBlockId, Integer> replicaCount = Maps.newHashMap();
     private int numMRTasks;
     private int numReplicaTasks;
+    private int numMRTasksLeft;
+    private int numMRTasksKilled;
+    private int numReplicateTasksKilled;
 
     public long getTime() {
         return time;
@@ -77,4 +80,30 @@ public class Status {
     public void setNumReplicaTasks(int numReplicaTasks) {
         this.numReplicaTasks = numReplicaTasks;
     }
+
+    public int getNumMRTasksLeft() {
+        return numMRTasksLeft;
+    }
+
+    public void setNumMRTasksLeft(int numMRTasksLeft) {
+        this.numMRTasksLeft = numMRTasksLeft;
+    }
+
+    public int getNumMRTasksKilled() {
+        return numMRTasksKilled;
+    }
+
+    public void setNumMRTasksKilled(int numMRTasksKilled) {
+        this.numMRTasksKilled = numMRTasksKilled;
+    }
+
+    public int getNumReplicateTasksKilled() {
+        return numReplicateTasksKilled;
+    }
+
+    public void setNumReplicateTasksKilled(int numReplicateTasksKilled) {
+        this.numReplicateTasksKilled = numReplicateTasksKilled;
+    }
+    
+    
 }

@@ -82,7 +82,7 @@ public abstract class AbstractReplicateTaskScheduler implements ReplicateTaskSch
                                             if (!workingNodes.contains(toNode)) {
                                                 if (!toNode.equals(fromNode)) {
                                                     workingNodes.add(fromNode);
-                                                    workingNodes.add(toNode);
+//                                                    workingNodes.add(toNode);
                                                     return Optional.of(new ReplicateTask(dataBlock, cluster, rack, rack, fromNode, toNode));
                                                 }
                                             }
@@ -115,7 +115,7 @@ public abstract class AbstractReplicateTaskScheduler implements ReplicateTaskSch
                                                     if (!workingNodes.contains(toNode)) {
                                                         if (!toNode.getDataBlocks().contains(dataBlock)) {
                                                             workingNodes.add(fromNode);
-                                                            workingNodes.add(toNode);
+//                                                            workingNodes.add(toNode);
                                                             return Optional.of(new ReplicateTask(dataBlock, cluster, fromRack, toRack, fromNode, toNode));
                                                         }
                                                     }

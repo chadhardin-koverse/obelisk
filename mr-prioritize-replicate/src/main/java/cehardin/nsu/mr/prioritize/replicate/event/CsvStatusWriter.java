@@ -1,7 +1,5 @@
 package cehardin.nsu.mr.prioritize.replicate.event;
 
-import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
-import static java.lang.String.format;
 import static java.util.Collections.unmodifiableList;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Maps.newHashMap;
@@ -13,14 +11,13 @@ import java.io.Writer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *
  * @author cehar_000
  */
 public class CsvStatusWriter implements StatusWriter {
-    private final List<String> header = unmodifiableList(newArrayList("time", "numNodes", "numFailedNodes", "numDataBlocks", "numMRTasks", "numReplicaTasks", "num0Replicas", "num1Replicas", "num2Replicas", "num3Replicas", "numOver3Replicas"));
+    private final List<String> header = unmodifiableList(newArrayList("time", "numNodes", "numFailedNodes", "numDataBlocks", "numMRTasks", "numReplicaTasks", "numMRTasksLeft", "numMRTasksKilled", "numReplicateTasksKilled", "num0Replicas", "num1Replicas", "num2Replicas", "num3Replicas", "numOver3Replicas"));
     private final Writer writer;
     private boolean wroteHeader = false;
 
@@ -53,6 +50,9 @@ public class CsvStatusWriter implements StatusWriter {
         list.add(Integer.toString(status.getNumDataBlocks()));
         list.add(Integer.toString(status.getNumMRTasks()));
         list.add(Integer.toString(status.getNumReplicaTasks()));
+        list.add(Integer.toString(status.getNumMRTasksLeft()));
+        list.add(Integer.toString(status.getNumMRTasksKilled()));
+        list.add(Integer.toString(status.getNumReplicateTasksKilled()));
         
         counts.put(0, 0);
         counts.put(1, 0);
