@@ -47,11 +47,12 @@ public class App implements Runnable {
             final Supplier<File> fileSupplier = new DateSequenceFileSupplier(outputDir, "mapreduce-simulation", "csv", new Date(), 1);
             final Supplier<Writer> writerSupplier = new FileWriterSupplier(fileSupplier);
             final Supplier<StatusWriter> statusWriterSupplier = new CsvStatusWriterSupplier(writerSupplier);
+            final MapReduceTaskScheduler mapReduceTaskScheduler = new StandardMapReduceTaskScheduler(executorService);
             final StandardReplicateTaskScheduler standardReplicateTaskScheduler = new StandardReplicateTaskScheduler(random, executorService);
             final HotDataBlockReplicateTaskScheduler hotDataBlockReplicateTaskScheduler = new HotDataBlockReplicateTaskScheduler(random, executorService, createTemperatureMap(variables.getNodeFailures(), variables.getNodeIds(), variables.getNodeIdToDataBlockIds()));
             
-            run(statusWriterSupplier, standardReplicateTaskScheduler);
-            run(statusWriterSupplier, hotDataBlockReplicateTaskScheduler);
+            run(statusWriterSupplier, standardReplicateTaskScheduler, mapReduceTaskScheduler);
+            run(statusWriterSupplier, hotDataBlockReplicateTaskScheduler, mapReduceTaskScheduler);
             
             System.out.printf("Output is at %s%n", outputDir.getCanonicalPath());
             executorService.shutdown();
@@ -61,9 +62,9 @@ public class App implements Runnable {
         }
     }
     
-    private void run(Supplier<StatusWriter> statusWriterSupplier, ReplicateTaskScheduler replicateTaskScheduler) {
+    private void run(Supplier<StatusWriter> statusWriterSupplier, ReplicateTaskScheduler replicateTaskScheduler, MapReduceTaskScheduler mapReduceTaskScheduler) {
         try {
-            final Simulator simulator = new Simulator(variables.clone(), statusWriterSupplier, replicateTaskScheduler);
+            final Simulator simulator = new Simulator(variables.clone(), statusWriterSupplier, replicateTaskScheduler, mapReduceTaskScheduler);
             final double time = simulator.call();
             System.out.printf("Elapsed time for supplier %s: %s%n", replicateTaskScheduler.getClass(), time);
         }   
@@ -122,10 +123,10 @@ public class App implements Runnable {
         numDataBlocks = numNodes * 100;
         maxConcurrentTasks = numNodes * 4;
         maxTasksPerNode = 2;
-        nodePercentageFailed1 = 0.05;
-        nodePercentageFailed2 = 0.05;
-        nodeFail2Time = TimeUnit.SECONDS.toMillis(30);
-        numTasks = numNodes * 30;
+        nodePercentageFailed1 = 0.02;
+        nodePercentageFailed2 = 0.02;
+        nodeFail2Time = TimeUnit.SECONDS.toMillis(45);
+        numTasks = numNodes * 60;
         
         VariablesFactory variablesFactory = new VariablesFactory(
                 random, 

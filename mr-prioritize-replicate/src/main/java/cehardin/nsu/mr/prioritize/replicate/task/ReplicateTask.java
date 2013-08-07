@@ -1,6 +1,7 @@
 package cehardin.nsu.mr.prioritize.replicate.task;
 
 import static com.google.common.collect.Lists.newArrayList;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Collections.unmodifiableList;
 
 import cehardin.nsu.mr.prioritize.replicate.DataBlock;
@@ -82,6 +83,13 @@ public class ReplicateTask implements Task {
         }
     }
     
+    private static class IsCritical implements Predicate<ReplicateTask> {
+        @Override
+        public boolean apply(ReplicateTask replicateTask) {
+            return replicateTask.fromRack.equals(replicateTask.toRack);
+        }
+    }
+    
 
     private static final ExtractDataBlockId EXTRACT_DATA_BLOCK_ID = new ExtractDataBlockId();
     private static final ExtractFromNode EXTRACT_FROM_NODE = new ExtractFromNode();
@@ -112,6 +120,10 @@ public class ReplicateTask implements Task {
         return new ReliesOnNode(node);
     }
     
+    public static Predicate<ReplicateTask> isReplicateTaskCritical() {
+        return new IsCritical();
+    }
+    
     private final DataBlock dataBlock;
     private final Cluster cluster;
     private final Rack fromRack;
@@ -126,12 +138,12 @@ public class ReplicateTask implements Task {
             Rack toRack,
             Node fromNode,
             Node toNode) {
-        this.dataBlock = dataBlock;
-        this.cluster = cluster;
-        this.fromRack = fromRack;
-        this.toRack = toRack;
-        this.fromNode = fromNode;
-        this.toNode = toNode;
+        this.dataBlock = checkNotNull(dataBlock);
+        this.cluster = checkNotNull(cluster);
+        this.fromRack = checkNotNull(fromRack);
+        this.toRack = checkNotNull(toRack);
+        this.fromNode = checkNotNull(fromNode);
+        this.toNode = checkNotNull(toNode);
     }
 
     public void run(final Runnable callback) {
