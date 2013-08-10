@@ -24,6 +24,7 @@ import static java.lang.String.format;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +85,6 @@ public class VariablesFactory implements Supplier<Variables>{
     @Override
     public Variables get() {
         final SortedSet<Variables.NodeFailure> nodeFailures;
-        final Set<NodeId> failedNodeIds = newHashSet();
         final int nodesPerRack = numNodes / numRacks;
         final Set<RackId> rackIds = newHashSet();
         final Set<NodeId> nodeIds = newHashSet();
@@ -176,48 +176,125 @@ public class VariablesFactory implements Supplier<Variables>{
         nodeFailures = newTreeSet();
         
         System.out.printf("Creating failures (%s%%)%n", nodePercentageFailed * 100);
-        while( ((double)failedNodeIds.size() / (double)nodeIds.size()) < nodePercentageFailed) {
-            final NodeId nodeId = Util.pickRandom(random, nodeIds, failedNodeIds);
-            boolean allowFail = true;
+        {
+            final Map<DataBlockId, Set<NodeId>> workingDataBlockToNodes = newHashMap();
+            final Set<DataBlockId> criticalDataBlocks = newHashSet();
+            final Set<NodeId> criticalNodes = newHashSet();
+            final Set<NodeId> uncriticalNodes = newHashSet();
+            final Set<NodeId> killedNodes = newHashSet();
+            final int numFailedNodes = (int)((double)nodeIds.size() * nodePercentageFailed);
+            final Map<DataBlockId, Integer> afterFailureBlockCount = newHashMap();
+            int numCriticalNodesKilled = 0;
+            int numUnCriticalNodesKilled = 0;
             
-            for(final DataBlockId dataBlock : nodeToDataBlocks.get(nodeId)) {
-                if(mapReduceJob.getDataBlocks().contains(dataBlock)) {
-                    int count = 0;
-                    
-                    for(final NodeId nodeToCheck : nodeIds) {
-                        if(!failedNodeIds.contains(nodeToCheck)) {
-                            if(!nodeId.equals(nodeToCheck)) {
-                                if(nodeToDataBlocks.get(nodeToCheck).contains(dataBlock)) {
-                                    count++;
-                                }
+            for(final DataBlockId dataBlockId : dataBlockToNodes.keySet()) {
+                workingDataBlockToNodes.put(dataBlockId, new HashSet<NodeId>());
+                workingDataBlockToNodes.get(dataBlockId).addAll(dataBlockToNodes.get(dataBlockId));
+            }
+            
+            for(final TaskId taskId : mapReduceJob.getTaskIds()) {
+                criticalDataBlocks.add(mapReduceJob.getTaskIdToDataBlockId().apply(taskId));
+            }
+            
+            for(final DataBlockId dataBlockId : criticalDataBlocks) {
+                criticalNodes.addAll(dataBlockToNodes.get(dataBlockId));
+            }
+            
+            for(final NodeId nodeId : nodeIds) {
+                if(!criticalNodes.contains(nodeId)) {
+                    uncriticalNodes.add(nodeId);
+                }
+            }
+            
+            //Create the failures, heavilly slanted towards nodes that
+            //are critical, as in, they contain data blocks that are used
+            //by the map reduce job
+            while(killedNodes.size() < numFailedNodes) {
+                final Iterator<NodeId> criticalNodesIterator = criticalNodes.iterator();
+                final Iterator<NodeId> uncriticalNodesIterator = uncriticalNodes.iterator();
+                NodeId killedNode = null;
+                
+                while(criticalNodesIterator.hasNext()) {
+                    final NodeId criticalNode = criticalNodesIterator.next();
+                    boolean canKillNode = true;
+                    for(final DataBlockId dataBlockId : nodeToDataBlocks.get(criticalNode)) {
+                        if(criticalDataBlocks.contains(dataBlockId)) {
+                            final int count = workingDataBlockToNodes.get(dataBlockId).size();
+                            
+                            if(count == 1) {
+                                canKillNode = false;
+                                break;
                             }
                         }
                     }
                     
-                    if(count == 0) {
-                        allowFail = false;
+                    if(canKillNode) {
+                        killedNode = criticalNode;
+                        System.out.printf("Failing CRITICAL node %s%n", killedNode);
+                        numCriticalNodesKilled++;
+                        criticalNodesIterator.remove();
                         break;
+                    }
+                    else {
+                        criticalNodesIterator.remove();
+                    }
+                }
+                
+                if(killedNode == null) {
+                    while(uncriticalNodesIterator.hasNext()) {
+                        final NodeId uncriticalNode = uncriticalNodesIterator.next();
+                        killedNode = uncriticalNode;
+                        System.out.printf("Failing uncritical node %s%n", killedNode);
+                        numUnCriticalNodesKilled++;
+                        uncriticalNodesIterator.remove();
+                        break;
+                    }
+                }
+                
+                if(killedNode == null) {
+                    throw new IllegalStateException("Could not kill enough nodes for MR job to still complete");
+                }
+                else {
+                    killedNodes.add(killedNode);
+                    for(final DataBlockId workingDataBlockId : workingDataBlockToNodes.keySet()) {
+                        workingDataBlockToNodes.get(workingDataBlockId).remove(killedNode);
                     }
                 }
             }
             
-            if(allowFail) {
-                failedNodeIds.add(nodeId);
-                System.out.printf("%,d%%,", (long)((long)(failedNodeIds.size() * 100)) / ((long)(nodePercentageFailed * nodeIds.size())));
-            }
-        }
-        
-        System.out.println();
-        
-        for(final NodeId failedNode : failedNodeIds) {
-            final Variables.NodeFailure nodeFailure = new Variables.NodeFailure(failedNode, 0, TimeUnit.MINUTES);
+            //create the node failues
+            for(final NodeId killedNode : killedNodes) {
+                final Variables.NodeFailure nodeFailure = new Variables.NodeFailure(killedNode, 0, TimeUnit.MINUTES);
                 
-            nodeFailures.add(nodeFailure);
-            System.out.println(failedNode.toString());
+                nodeFailures.add(nodeFailure);
+            }
+            
+            //determine the block counts after failure
+            for(final DataBlockId dataBlockId : dataBlockIds) {
+                afterFailureBlockCount.put(dataBlockId, 0);
+                
+                for(final NodeId nodeId : dataBlockToNodes.get(dataBlockId)) {
+                    if(!killedNodes.contains(nodeId)) {
+                        afterFailureBlockCount.put(dataBlockId, afterFailureBlockCount.get(dataBlockId) + 1);
+                    }
+                }
+            }
+            
+            //sanity check
+            for(final TaskId taskId : mapReduceJob.getTaskIds()) {
+                final DataBlockId dataBlockId = mapReduceJob.getTaskIdToDataBlockId().apply(taskId);
+                final int count = afterFailureBlockCount.get(dataBlockId);
+                
+                if(count == 0) {
+                    throw new IllegalStateException(format("Cannot continue because data block %s has been wiped out", dataBlockId));
+                }
+            }
+            
+            System.out.printf("%nSet up %,d node failures.  %,d are critical and %,d are not critical%n", nodeFailures.size(), numCriticalNodesKilled, numUnCriticalNodesKilled);
         }
         
         
-        System.out.printf("%nSet up %s node failures%n", nodeFailures.size());
+        
         
         nodeToRackFunction = forMap(nodeToRack);
         
