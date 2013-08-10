@@ -65,8 +65,8 @@ public class ReplicateTask implements Task {
     private static class ExtractNodes implements Function<ReplicateTask, Iterable<Node>> {
         @Override
         public Iterable<Node> apply(ReplicateTask replicateTask) {
-//            return unmodifiableList(newArrayList(replicateTask.fromNode, replicateTask.toNode));
-            return unmodifiableList(newArrayList(replicateTask.fromNode));
+            return unmodifiableList(newArrayList(replicateTask.fromNode, replicateTask.toNode));
+//            return unmodifiableList(newArrayList(replicateTask.fromNode));
         }
     }
     

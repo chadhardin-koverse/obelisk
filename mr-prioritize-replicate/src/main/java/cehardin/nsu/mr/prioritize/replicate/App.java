@@ -66,7 +66,7 @@ public class App implements Runnable {
         try {
             final Simulator simulator = new Simulator(variables.clone(), statusWriterSupplier, replicateTaskScheduler, mapReduceTaskScheduler);
             final double time = simulator.call();
-            System.out.printf("Elapsed time for supplier %s: %s%n", replicateTaskScheduler.getClass(), time);
+            System.out.printf("Elapsed time for supplier %s: %,d%n", replicateTaskScheduler.getClass(), (long)time);
         }   
         catch(Exception e) {
             throw new RuntimeException("Failed", e);
@@ -106,9 +106,8 @@ public class App implements Runnable {
         final int numNodes;
         final int maxConcurrentTasks;
         final int maxTasksPerNode;
-        final double nodePercentageFailed1;
-        final double nodePercentageFailed2;
-        final long nodeFail2Time;
+        final double nodePercentageFailed;
+        final long mapReduceStartTime;
         final int numRacks;
         final int numDataBlocks;
         final int numTasks;
@@ -122,11 +121,10 @@ public class App implements Runnable {
         numRacks = numNodes / 16;
         numDataBlocks = numNodes * 100;
         maxConcurrentTasks = numNodes * 4;
-        maxTasksPerNode = 2;
-        nodePercentageFailed1 = 0.02;
-        nodePercentageFailed2 = 0.02;
-        nodeFail2Time = TimeUnit.SECONDS.toMillis(45);
-        numTasks = numNodes * 60;
+        maxTasksPerNode = 1;
+        nodePercentageFailed = 0.10;
+        mapReduceStartTime = TimeUnit.SECONDS.toMillis(20);
+        numTasks = numNodes * 10;
         
         VariablesFactory variablesFactory = new VariablesFactory(
                 random, 
@@ -139,9 +137,8 @@ public class App implements Runnable {
                 numDataBlocks, 
                 maxConcurrentTasks, 
                 maxTasksPerNode, 
-                nodePercentageFailed1, 
-                nodePercentageFailed2,
-                nodeFail2Time,
+                nodePercentageFailed, 
+                mapReduceStartTime,
                 numTasks);
         
         System.out.printf("Creating variables...%n");

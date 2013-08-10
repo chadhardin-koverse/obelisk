@@ -148,6 +148,16 @@ public class Variables implements Serializable {
             return taskIdToDataBlockId;
         }
         
+        public Set<DataBlockId> getDataBlocks() {
+            final Set<DataBlockId> dataBlocks = newHashSet();
+            
+            for(final TaskId task : getTaskIds()) {
+                dataBlocks.add(getTaskIdToDataBlockId().apply(task));
+            }
+            
+            return dataBlocks;
+        }
+        
         @Override
         public MapReduceJob clone() {
             return new MapReduceJob(startTime, timeUnit, taskIds, taskIdToDataBlockId);

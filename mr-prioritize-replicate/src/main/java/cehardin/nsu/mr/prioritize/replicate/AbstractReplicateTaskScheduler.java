@@ -2,6 +2,7 @@ package cehardin.nsu.mr.prioritize.replicate;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Iterables.concat;
+import static com.google.common.collect.Iterables.filter;
 import static com.google.common.collect.Maps.newHashMap;
 import static com.google.common.collect.Maps.newConcurrentMap;
 
@@ -14,6 +15,7 @@ import cehardin.nsu.mr.prioritize.replicate.id.RackId;
 import cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask;
 import static cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask.extractDataBlockIdFromReplicateTask;
 import static cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask.extractNodesFromReplicateTask;
+import static cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask.isReplicateTaskCritical;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import static com.google.common.collect.Iterables.transform;
@@ -55,7 +57,7 @@ public abstract class AbstractReplicateTaskScheduler implements ReplicateTaskSch
     public final List<ReplicateTask> schedule(final Cluster cluster, final Iterable<ReplicateTask> runningTasks) {
         final List<ReplicateTask> tasks = newArrayList();
         final Set<DataBlockId> workingDataBlocks = newHashSet(transform(runningTasks, extractDataBlockIdFromReplicateTask()));
-        final Set<Node> workingNodes = newCopyOnWriteArraySet(concat(transform(runningTasks, extractNodesFromReplicateTask())));
+        final Set<Node> workingNodes = newCopyOnWriteArraySet(concat(transform(filter(runningTasks, isReplicateTaskCritical()), extractNodesFromReplicateTask())));
         final List<DataBlockId> one = new ArrayList<>();
         final List<DataBlockId> two = new ArrayList<>();
         final List<Future<Optional<ReplicateTask>>> futures = new ArrayList<>();

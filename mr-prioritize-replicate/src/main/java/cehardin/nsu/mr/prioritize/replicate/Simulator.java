@@ -2,18 +2,12 @@ package cehardin.nsu.mr.prioritize.replicate;
 
 import cehardin.nsu.mr.prioritize.replicate.event.Status;
 import cehardin.nsu.mr.prioritize.replicate.event.StatusWriter;
-import static com.google.common.base.Predicates.not;
-import static com.google.common.base.Predicates.instanceOf;
-import static com.google.common.collect.Iterables.size;
 import static com.google.common.collect.Iterables.filter;
-import static com.google.common.collect.Iterables.concat;
 import static com.google.common.collect.Iterables.removeIf;
 import static com.google.common.collect.Sets.difference;
 import static com.google.common.collect.Sets.newHashSet;
 import static com.google.common.collect.Lists.newArrayList;
-import static com.google.common.collect.Lists.newLinkedList;
 import static com.google.common.collect.Lists.newCopyOnWriteArrayList;
-import static cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask.replicateTaskSameBlock;
 import static cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask.isReplicateTaskCritical;
 import static cehardin.nsu.mr.prioritize.replicate.hardware.Node.extractIdFromHardware;
 
@@ -27,23 +21,16 @@ import cehardin.nsu.mr.prioritize.replicate.id.TaskId;
 import cehardin.nsu.mr.prioritize.replicate.task.MapReduceTask;
 import cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask;
 import static cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask.extractNodesFromReplicateTask;
-import cehardin.nsu.mr.prioritize.replicate.task.Task;
-import com.google.common.base.Functions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import static com.google.common.collect.Iterables.concat;
 import static com.google.common.collect.Iterables.transform;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
@@ -80,7 +67,7 @@ public class Simulator implements Callable<Double> {
         final List<Resource> resources = newArrayList();
 //        final double totalTime = 1000000;
         final double mapReduceTimeStep = TimeUnit.SECONDS.toMillis(4);
-        final double replicaTimeStep = TimeUnit.MINUTES.toMillis(30);
+        final double replicaTimeStep = TimeUnit.MINUTES.toMillis(10);
         final List<MapReduceTask> runningMapReduceTasks = newCopyOnWriteArrayList();
         final List<ReplicateTask> runningReplicateTasks = newCopyOnWriteArrayList();
         final AtomicInteger numMRTasksCompleted = new AtomicInteger(0);
@@ -189,11 +176,16 @@ public class Simulator implements Callable<Double> {
             }
             System.out.printf("Scheduled %,d replicate tasks%n", replicateTasks.size());
             
-            for(final MapReduceTask mapReduceTask : mapReduceTaskScheduler.schedule(cluster, mapReduceJob, newHashSet(transform(concat(transform(filter(concat(runningReplicateTasks, replicateTasks), isReplicateTaskCritical()), extractNodesFromReplicateTask())), extractIdFromHardware(NodeId.class))), variables.getMaxConcurrentTasks() - runningMapReduceTasks.size())) {
-                mapReduceJob.getTaskIds().remove(mapReduceTask.getTaskId());
-                mapReduceTasks.add(mapReduceTask);
+            if(currentTime >= mapReduceJob.getStartTime()) {
+                for(final MapReduceTask mapReduceTask : mapReduceTaskScheduler.schedule(cluster, mapReduceJob, newHashSet(transform(concat(transform(filter(concat(runningReplicateTasks, replicateTasks), isReplicateTaskCritical()), extractNodesFromReplicateTask())), extractIdFromHardware(NodeId.class))), variables.getMaxConcurrentTasks() - runningMapReduceTasks.size())) {
+                    mapReduceJob.getTaskIds().remove(mapReduceTask.getTaskId());
+                    mapReduceTasks.add(mapReduceTask);
+                }
+                System.out.printf("Scheduled %,d MR tasks%n", mapReduceTasks.size());
             }
-            System.out.printf("Scheduled %,d MR tasks%n", mapReduceTasks.size());
+            else {
+                System.out.printf("Not starting MR job until time %,d%n", mapReduceJob.getStartTime());
+            }
 
 
             for (final ReplicateTask replicateTask : replicateTasks) {
@@ -220,8 +212,39 @@ public class Simulator implements Callable<Double> {
 
             
             {
-                final double availableStepTime = runningMapReduceTasks.isEmpty() ? replicaTimeStep : mapReduceTimeStep;
+                final double availableStepTime;
                 double time = 0;
+                
+                if(mapReduceJob.getTaskIds().isEmpty()) {
+                    if(runningMapReduceTasks.isEmpty()) {
+                        availableStepTime = replicaTimeStep;
+                    }
+                    else {
+                        availableStepTime = mapReduceTimeStep;
+                    }
+                }
+                else {
+                    if(currentTime < mapReduceJob.getStartTime()) {
+                        availableStepTime = mapReduceJob.getStartTime() - currentTime;
+                    }
+                    else {
+                        availableStepTime = mapReduceTimeStep;
+                    }
+                }
+//                if(runningMapReduceTasks.isEmpty()) {
+//                    if(currentTime == mapReduceJob.getStartTime()) {
+//                        availableStepTime = mapReduceTimeStep;
+//                    }
+//                    else if(currentTime < mapReduceJob.getStartTime()) {
+//                        availableStepTime = mapReduceJob.getStartTime() - currentTime;
+//                    }
+//                    else {
+//                        availableStepTime = replicaTimeStep;
+//                    }
+//                }
+//                else {
+//                    availableStepTime = mapReduceTimeStep;
+//                }
                 
                 for (final Resource resource : resources) {
                     time = Math.max(time, resource.execute(availableStepTime));

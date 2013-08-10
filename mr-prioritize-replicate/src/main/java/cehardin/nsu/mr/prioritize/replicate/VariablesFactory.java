@@ -5,6 +5,7 @@
 package cehardin.nsu.mr.prioritize.replicate;
 
 import static cehardin.nsu.mr.prioritize.replicate.Util.pickRandom;
+import static com.google.common.collect.Sets.intersection;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import cehardin.nsu.mr.prioritize.replicate.id.RackId;
@@ -23,6 +24,7 @@ import static java.lang.String.format;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -46,9 +48,8 @@ public class VariablesFactory implements Supplier<Variables>{
     private final int numDataBlocks;
     private final int maxConcurrentTasks;
     private final int maxTasksPerNode;
-    private final double nodePercentageFailed1;
-    private final double nodePercentageFailed2;
-    private final long nodeFailed2Time; 
+    private final double nodePercentageFailed;
+    private final long mapReduceStartTime; 
     private final int numTasks;
 
     public VariablesFactory(
@@ -62,9 +63,8 @@ public class VariablesFactory implements Supplier<Variables>{
             int numDataBlocks, 
             int maxConcurrentTasks, 
             int maxTasksPerNode, 
-            double nodePercentageFailed1,
-            double nodePercentageFailed2,
-            long nodeFailed2Time,
+            double nodePercentageFailed,
+            long mapReduceStartTime,
             int numTasks) {
         this.random = random;
         this.diskBadwidth = diskBadwidth;
@@ -76,9 +76,8 @@ public class VariablesFactory implements Supplier<Variables>{
         this.numDataBlocks = numDataBlocks;
         this.maxConcurrentTasks = maxConcurrentTasks;
         this.maxTasksPerNode = maxTasksPerNode;
-        this.nodePercentageFailed1 = nodePercentageFailed1;
-        this.nodePercentageFailed2 = nodePercentageFailed2;
-        this.nodeFailed2Time = nodeFailed2Time;
+        this.nodePercentageFailed = nodePercentageFailed;
+        this.mapReduceStartTime = mapReduceStartTime;
         this.numTasks = numTasks;
     }
 
@@ -172,30 +171,53 @@ public class VariablesFactory implements Supplier<Variables>{
             System.out.printf("%n");
         }
         
-        mapReduceJob = new Variables.MapReduceJob(5, TimeUnit.SECONDS, taskIds, forMap(taskToDataBlock));
+        mapReduceJob = new Variables.MapReduceJob(mapReduceStartTime, TimeUnit.MILLISECONDS, taskIds, forMap(taskToDataBlock));
         
         nodeFailures = newTreeSet();
         
-        //first failueres
-        {
-            System.out.printf("Creating first failures (%s%%)%n", nodePercentageFailed1 * 100);
-            for(final NodeId failedNode : Util.pickRandomPercentage(random, nodeIds, nodePercentageFailed1)) {
-                final Variables.NodeFailure nodeFailure = new Variables.NodeFailure(failedNode, 0, TimeUnit.MINUTES);
-                
-                nodeFailures.add(nodeFailure);
-                failedNodeIds.add(failedNode);
+        System.out.printf("Creating failures (%s%%)%n", nodePercentageFailed * 100);
+        while( ((double)failedNodeIds.size() / (double)nodeIds.size()) < nodePercentageFailed) {
+            final NodeId nodeId = Util.pickRandom(random, nodeIds, failedNodeIds);
+            boolean allowFail = true;
+            
+            for(final DataBlockId dataBlock : nodeToDataBlocks.get(nodeId)) {
+                if(mapReduceJob.getDataBlocks().contains(dataBlock)) {
+                    int count = 0;
+                    
+                    for(final NodeId nodeToCheck : nodeIds) {
+                        if(!failedNodeIds.contains(nodeToCheck)) {
+                            if(!nodeId.equals(nodeToCheck)) {
+                                if(nodeToDataBlocks.get(nodeToCheck).contains(dataBlock)) {
+                                    count++;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if(count == 0) {
+                        allowFail = false;
+                        break;
+                    }
+                }
+            }
+            
+            if(allowFail) {
+                failedNodeIds.add(nodeId);
+                System.out.printf("%,d%%,", (long)((long)(failedNodeIds.size() * 100)) / ((long)(nodePercentageFailed * nodeIds.size())));
             }
         }
         
-        //second failuers
-        System.out.printf("Creating second failures (%s%%) after %s ms%n", nodePercentageFailed2 * 100, nodeFailed2Time);
-        for(final NodeId failedNode : Util.pickRandomPercentage(random, nodeIds, failedNodeIds, nodePercentageFailed2)) {
-            final Variables.NodeFailure nodeFailure = new Variables.NodeFailure(failedNode, nodeFailed2Time, TimeUnit.MILLISECONDS);
+        System.out.println();
+        
+        for(final NodeId failedNode : failedNodeIds) {
+            final Variables.NodeFailure nodeFailure = new Variables.NodeFailure(failedNode, 0, TimeUnit.MINUTES);
+                
             nodeFailures.add(nodeFailure);
-            failedNodeIds.add(failedNode);
+            System.out.println(failedNode.toString());
         }
         
-        System.out.printf("Set up %s node failures%n", nodeFailures.size());
+        
+        System.out.printf("%nSet up %s node failures%n", nodeFailures.size());
         
         nodeToRackFunction = forMap(nodeToRack);
         
