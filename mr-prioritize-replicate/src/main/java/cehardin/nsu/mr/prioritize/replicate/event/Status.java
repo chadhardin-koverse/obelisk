@@ -15,12 +15,15 @@ import java.util.Map;
  */
 public class Status {
     private long time;
+    private long timeStep;
     private int numNodes;
     private int numFailedNodes;
     private int numDataBlocks;
     private Map<DataBlockId, Integer> replicaCount = Maps.newHashMap();
     private int numMRTasks;
     private int numReplicaTasks;
+    private int numCriticalReplicaTasks;
+    private int numNonCriticalReplicTasks;
     private int numMRTasksLeft;
     private int numMRTasksKilled;
     private int numReplicateTasksKilled;
@@ -32,6 +35,15 @@ public class Status {
     public void setTime(long time) {
         this.time = time;
     }
+
+    public long getTimeStep() {
+        return timeStep;
+    }
+
+    public void setTimeStep(long timeStep) {
+        this.timeStep = timeStep;
+    }
+    
 
     public int getNumNodes() {
         return numNodes;
@@ -79,6 +91,22 @@ public class Status {
 
     public void setNumReplicaTasks(int numReplicaTasks) {
         this.numReplicaTasks = numReplicaTasks;
+    }
+
+    public int getNumCriticalReplicaTasks() {
+        return numCriticalReplicaTasks;
+    }
+
+    public void setNumCriticalReplicaTasks(int numCriticalReplicaTasks) {
+        this.numCriticalReplicaTasks = numCriticalReplicaTasks;
+    }
+
+    public int getNumNonCriticalReplicTasks() {
+        return numNonCriticalReplicTasks;
+    }
+
+    public void setNumNonCriticalReplicTasks(int numNonCriticalReplicTasks) {
+        this.numNonCriticalReplicTasks = numNonCriticalReplicTasks;
     }
 
     public int getNumMRTasksLeft() {

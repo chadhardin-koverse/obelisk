@@ -146,6 +146,10 @@ public class ReplicateTask implements Task {
         this.toNode = checkNotNull(toNode);
     }
 
+    public DataBlock getDataBlock() {
+        return dataBlock;
+    }
+
     public void run(final Runnable callback) {
         final long size = dataBlock.getSize();
 

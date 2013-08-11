@@ -17,7 +17,15 @@ import java.util.Map;
  * @author cehar_000
  */
 public class CsvStatusWriter implements StatusWriter {
-    private final List<String> header = unmodifiableList(newArrayList("time", "numNodes", "numFailedNodes", "numDataBlocks", "numMRTasks", "numReplicaTasks", "numMRTasksLeft", "numMRTasksKilled", "numReplicateTasksKilled", "num0Replicas", "num1Replicas", "num2Replicas", "num3Replicas", "numOver3Replicas"));
+    private final List<String> header = unmodifiableList(newArrayList(
+            "time", "timeStep", 
+            "numNodes", "numFailedNodes", 
+            "numDataBlocks", 
+            "numMRTasks", 
+            "numReplicaTasks", "numCriticalReplicaTasks", "numNonCriticalReplicaTasks",
+            "numMRTasksLeft", 
+            /*"numMRTasksKilled", "numReplicateTasksKilled", */
+            "num0Replicas", "num1Replicas", "num2Replicas", "num3Replicas", "numOver3Replicas"));
     private final Writer writer;
     private boolean wroteHeader = false;
 
@@ -45,14 +53,17 @@ public class CsvStatusWriter implements StatusWriter {
         final Map<Integer, Integer> counts = newHashMap();
         
         list.add(Long.toString(status.getTime()));
+        list.add(Long.toString(status.getTimeStep()));
         list.add(Integer.toString(status.getNumNodes()));
         list.add(Integer.toString(status.getNumFailedNodes()));
         list.add(Integer.toString(status.getNumDataBlocks()));
         list.add(Integer.toString(status.getNumMRTasks()));
         list.add(Integer.toString(status.getNumReplicaTasks()));
+        list.add(Integer.toString(status.getNumCriticalReplicaTasks()));
+        list.add(Integer.toString(status.getNumNonCriticalReplicTasks()));
         list.add(Integer.toString(status.getNumMRTasksLeft()));
-        list.add(Integer.toString(status.getNumMRTasksKilled()));
-        list.add(Integer.toString(status.getNumReplicateTasksKilled()));
+        //list.add(Integer.toString(status.getNumMRTasksKilled()));
+        //list.add(Integer.toString(status.getNumReplicateTasksKilled()));
         
         counts.put(0, 0);
         counts.put(1, 0);

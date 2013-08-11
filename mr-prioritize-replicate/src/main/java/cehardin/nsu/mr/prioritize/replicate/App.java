@@ -12,6 +12,7 @@ import cehardin.nsu.mr.prioritize.replicate.event.FileWriterSupplier;
 import cehardin.nsu.mr.prioritize.replicate.event.StatusWriter;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
+import cehardin.nsu.mr.prioritize.replicate.id.TaskId;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import java.io.File;
@@ -49,7 +50,7 @@ public class App implements Runnable {
             final Supplier<StatusWriter> statusWriterSupplier = new CsvStatusWriterSupplier(writerSupplier);
             final MapReduceTaskScheduler mapReduceTaskScheduler = new StandardMapReduceTaskScheduler(executorService);
             final StandardReplicateTaskScheduler standardReplicateTaskScheduler = new StandardReplicateTaskScheduler(random, executorService);
-            final HotDataBlockReplicateTaskScheduler hotDataBlockReplicateTaskScheduler = new HotDataBlockReplicateTaskScheduler(random, executorService, createTemperatureMap(variables.getNodeFailures(), variables.getNodeIds(), variables.getNodeIdToDataBlockIds()));
+            final HotDataBlockReplicateTaskScheduler hotDataBlockReplicateTaskScheduler = new HotDataBlockReplicateTaskScheduler(random, executorService, createTemperatureMap(variables));
             
             run(statusWriterSupplier, standardReplicateTaskScheduler, mapReduceTaskScheduler);
             run(statusWriterSupplier, hotDataBlockReplicateTaskScheduler, mapReduceTaskScheduler);
@@ -73,23 +74,19 @@ public class App implements Runnable {
         }
     }
     
-    private Map<DataBlockId, Double> createTemperatureMap(Iterable<Variables.NodeFailure> nodeFailures, Iterable<NodeId> nodes, Function<NodeId, Set<DataBlockId>> nodeToDataBlocks) {
+    private Map<DataBlockId, Double> createTemperatureMap(Variables variables) {
+        final Variables.MapReduceJob mapReduceJob = variables.getMapReduceJob();
         final Map<DataBlockId, Double> temperatureMap = new HashMap<>();
         
-        for(final NodeId nodeId : nodes) {
-            for(final DataBlockId dataBlockId : nodeToDataBlocks.apply(nodeId)) {
+        for(final NodeId nodeId : variables.getNodeIds()) {
+            for(final DataBlockId dataBlockId : variables.getNodeIdToDataBlockIds().apply(nodeId)) {
                 temperatureMap.put(dataBlockId, 0.0);
             }
         }
         
-        for(final Variables.NodeFailure nodeFailure : nodeFailures) {
-            final long time = nodeFailure.getTimeUnit().toMillis(nodeFailure.getTime());
-            final double temperature = Long.MAX_VALUE - time;
-            
-            for(final DataBlockId dataBlockId : nodeToDataBlocks.apply(nodeFailure.getNodeId())) {
-                final double currentTemperature = temperatureMap.get(dataBlockId);
-                temperatureMap.put(dataBlockId, Math.max(temperature, currentTemperature));
-            }
+        for(final TaskId taskId : mapReduceJob.getTaskIds()) {
+            final DataBlockId dataBlockId = mapReduceJob.getTaskIdToDataBlockId().apply(taskId);
+            temperatureMap.put(dataBlockId, temperatureMap.get(dataBlockId) + 1);
         }
         
         return temperatureMap;
@@ -123,8 +120,8 @@ public class App implements Runnable {
         maxConcurrentTasks = numNodes * 4;
         maxTasksPerNode = 1;
         nodePercentageFailed = 0.60;
-        mapReduceStartTime = TimeUnit.SECONDS.toMillis(20);
-        numTasks = numNodes / 4;
+        mapReduceStartTime = TimeUnit.SECONDS.toMillis(60);
+        numTasks = numNodes / 2;
         
         VariablesFactory variablesFactory = new VariablesFactory(
                 random, 

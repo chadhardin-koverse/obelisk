@@ -1,20 +1,11 @@
 package cehardin.nsu.mr.prioritize.replicate;
 
-import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Maps.newHashMap;
 import static com.google.common.collect.Maps.newTreeMap;
+import static cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask.isReplicateTaskCritical;
 
-import cehardin.nsu.mr.prioritize.replicate.hardware.Cluster;
-import cehardin.nsu.mr.prioritize.replicate.hardware.Node;
-import cehardin.nsu.mr.prioritize.replicate.hardware.Rack;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask;
-import static cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask.extractDataBlockIdFromReplicateTask;
-import com.google.common.base.Optional;
-import static com.google.common.collect.Iterables.transform;
-import static com.google.common.collect.Sets.newHashSet;
-import com.google.common.util.concurrent.Futures;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -23,11 +14,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 
 /**
  *
@@ -37,18 +24,43 @@ public class HotDataBlockReplicateTaskScheduler extends AbstractReplicateTaskSch
     
     private final SortedMap<Double, Set<DataBlockId>> tempToDataBlockIds;
     private final Map<DataBlockId, Double> dataBlockIdToTemp;
-    private final Comparator<DataBlockId> comparator = new Comparator<DataBlockId>() {
-            @Override
-            public int compare(DataBlockId db1, DataBlockId db2) {
-                final double t1 = dataBlockIdToTemp.get(db1);
-                final double t2 = dataBlockIdToTemp.get(db2);
+    
+    private final Comparator<ReplicateTask> comparator = new Comparator<ReplicateTask>() {
 
-                return t1 > t2 ? 1 : t2 > t1 ? -1 : 0;
+        @Override
+        public int compare(ReplicateTask task1, ReplicateTask task2) {
+            final double temp1 = dataBlockIdToTemp.get(task1.getDataBlock().getId());
+            final double temp2 = dataBlockIdToTemp.get(task2.getDataBlock().getId());
+            final boolean task1Critical = isReplicateTaskCritical().apply(task1);
+            final boolean task2Critical = isReplicateTaskCritical().apply(task2);
+            final int result;    
+            
+            if( (task1Critical && task2Critical) || (!task1Critical && !task2Critical)) {
+                if(temp1 > temp2) {
+                    result = 1;
+                }
+                else if(temp1 < temp2) {
+                    result = -1;
+                }
+                else {
+                    result = 0;
+                }
             }
-        };
+            else if(task1Critical) {
+                result = 1;
+            }
+            else {
+                result = -1;
+            }
+            
+            return result;
+        }
+    };
 
     public HotDataBlockReplicateTaskScheduler(Random random, ExecutorService executorService, Map<DataBlockId, Double> dataBlockIdToTemp) {
         super(random, executorService);
+        final Map<Double, Integer> temperatureCount = newHashMap();
+        
         this.dataBlockIdToTemp = newHashMap(dataBlockIdToTemp);
         this.tempToDataBlockIds = newTreeMap();
 
@@ -62,11 +74,22 @@ public class HotDataBlockReplicateTaskScheduler extends AbstractReplicateTaskSch
 
             tempToDataBlockIds.get(temp).add(dataBlockId);
         }
+        
+        for(final Double temperatue : dataBlockIdToTemp.values()) {
+            if(temperatureCount.containsKey(temperatue)) {
+                temperatureCount.put(temperatue, temperatureCount.get(temperatue) + 1);
+            }
+            else {
+                temperatureCount.put(temperatue, 1);
+            }
+        }
+        
+        System.out.println(String.format("Temperature Count: %s", temperatureCount));
+        
     }
 
     @Override
-    protected void sort(List<DataBlockId> oneCopy, List<DataBlockId> twoCopies) {
-        Collections.sort(oneCopy, comparator);
-        Collections.sort(twoCopies, comparator);
+    protected void sort(List<ReplicateTask> tasks) {
+        Collections.sort(tasks, comparator);
     }
 }

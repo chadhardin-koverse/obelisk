@@ -2,7 +2,9 @@ package cehardin.nsu.mr.prioritize.replicate;
 
 import cehardin.nsu.mr.prioritize.replicate.event.Status;
 import cehardin.nsu.mr.prioritize.replicate.event.StatusWriter;
+import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.Iterables.filter;
+import static com.google.common.collect.Iterables.size;
 import static com.google.common.collect.Iterables.removeIf;
 import static com.google.common.collect.Sets.difference;
 import static com.google.common.collect.Sets.newHashSet;
@@ -31,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
@@ -66,12 +69,13 @@ public class Simulator implements Callable<Double> {
         final StatusWriter statusWriter = statusWriterSupplier.get();
         final List<Resource> resources = newArrayList();
 //        final double totalTime = 1000000;
-        final double mapReduceTimeStep = TimeUnit.SECONDS.toMillis(4);
-        final double replicaTimeStep = TimeUnit.MINUTES.toMillis(10);
+        final double mapReduceTimeStep = TimeUnit.SECONDS.toMillis(10);
+        final double replicaTimeStep = TimeUnit.MINUTES.toMillis(60);
         final List<MapReduceTask> runningMapReduceTasks = newCopyOnWriteArrayList();
         final List<ReplicateTask> runningReplicateTasks = newCopyOnWriteArrayList();
         final AtomicInteger numMRTasksCompleted = new AtomicInteger(0);
-        final AtomicInteger numReplicateTasksCompleted = new AtomicInteger(0);
+        final AtomicInteger numCriticalReplicateTasksCompleted = new AtomicInteger(0);
+        final AtomicInteger numNonCriticalReplicateTasksCompleted = new AtomicInteger(0);
         final AtomicInteger numMRTasksKilled = new AtomicInteger(0);
         final AtomicInteger numReplicateTasksKilled = new AtomicInteger(0);
         double currentTime = 0;
@@ -94,36 +98,9 @@ public class Simulator implements Callable<Double> {
             final Status status = new Status();
             final List<MapReduceTask> mapReduceTasks = newArrayList();
             final List<ReplicateTask> replicateTasks = newArrayList();
+            final double timeElapsed;
             
             System.out.printf("START.  Time=%,d%n", (long)currentTime);
-
-//            taskToNode = allocator.allocate(
-//                    mapReduceJob.getTaskIds(),
-//                    cluster.getNodesById().keySet(),
-//                    Functions.forMap(cluster.getDataBlockIdToNodeIds(), new HashSet<NodeId>()),
-//                    mapReduceJob.getTaskIdToDataBlockId());
-
-           
-            
-//            for (final Map.Entry<TaskId, NodeId> entry : taskToNode.entrySet()) {
-//                final TaskId taskId = entry.getKey();
-//                final NodeId nodeId = entry.getValue();
-//                final DataBlockId dataBlockId = mapReduceJob.getTaskIdToDataBlockId().apply(taskId);
-//
-//                if ((runningMapReduceTasks.size() + mapReduceTasks.size()) < variables.getMaxConcurrentTasks()) {
-//                    if (cluster.getNodesById().containsKey(nodeId)) {
-//                        if (cluster.getNodesById().get(nodeId).hasDataBlock(dataBlockId)) {
-//                            final MapReduceTask mapReduceTask = new MapReduceTask(
-//                                    taskId,
-//                                    cluster.getNodesById().get(nodeId),
-//                                    cluster.getNodesById().get(nodeId).getDataBlockById().get(dataBlockId));
-//
-//                            mapReduceJob.getTaskIds().remove(taskId);
-//                            mapReduceTasks.add(mapReduceTask);
-//                        }
-//                    }
-//                }
-//            }
 
 
             if (!variables.getNodeFailures().isEmpty()) {
@@ -174,7 +151,7 @@ public class Simulator implements Callable<Double> {
             for (final ReplicateTask replicateTask : replicateTaskScheduler.schedule(cluster, runningReplicateTasks)) {
                 replicateTasks.add(replicateTask);
             }
-            System.out.printf("Scheduled %,d replicate tasks%n", replicateTasks.size());
+            System.out.printf("Scheduled %,d (%,d / %,d) replicate tasks%n", replicateTasks.size(), size(filter(replicateTasks, isReplicateTaskCritical())), size(filter(replicateTasks, not(isReplicateTaskCritical()))));
             
             if(currentTime >= mapReduceJob.getStartTime()) {
                 for(final MapReduceTask mapReduceTask : mapReduceTaskScheduler.schedule(cluster, mapReduceJob, newHashSet(transform(concat(transform(filter(concat(runningReplicateTasks, replicateTasks), isReplicateTaskCritical()), extractNodesFromReplicateTask())), extractIdFromHardware(NodeId.class))), variables.getMaxConcurrentTasks() - runningMapReduceTasks.size())) {
@@ -193,7 +170,12 @@ public class Simulator implements Callable<Double> {
                 replicateTask.run(new Runnable() {
                     @Override
                     public void run() {
-                        numReplicateTasksCompleted.incrementAndGet();
+                        if(isReplicateTaskCritical().apply(replicateTask)) {
+                            numCriticalReplicateTasksCompleted.incrementAndGet();
+                        }
+                        else {
+                            numNonCriticalReplicateTasksCompleted.incrementAndGet();
+                        }
                         runningReplicateTasks.remove(replicateTask);
                     }
                 });
@@ -228,44 +210,36 @@ public class Simulator implements Callable<Double> {
                         availableStepTime = mapReduceJob.getStartTime() - currentTime;
                     }
                     else {
-                        availableStepTime = mapReduceTimeStep;
+                        availableStepTime = mapReduceTimeStep * 10;
                     }
                 }
-//                if(runningMapReduceTasks.isEmpty()) {
-//                    if(currentTime == mapReduceJob.getStartTime()) {
-//                        availableStepTime = mapReduceTimeStep;
-//                    }
-//                    else if(currentTime < mapReduceJob.getStartTime()) {
-//                        availableStepTime = mapReduceJob.getStartTime() - currentTime;
-//                    }
-//                    else {
-//                        availableStepTime = replicaTimeStep;
-//                    }
-//                }
-//                else {
-//                    availableStepTime = mapReduceTimeStep;
-//                }
                 
                 for (final Resource resource : resources) {
                     time = Math.max(time, resource.execute(availableStepTime));
                 }
 
-                currentTime += time;
+                timeElapsed = time;
+                currentTime += timeElapsed;
             }
 
             System.out.printf("MR Job Tasks left: %,d%n", variables.getMapReduceJob().getTaskIds().size());
             System.out.printf("# Data blocks with 3 copies: %,d%n", cluster.getReplicationCounts().containsKey(3) ? cluster.getReplicationCounts().get(3).size() : 0);
             System.out.printf("# Data blocks with 2 copies: %,d%n", cluster.getReplicationCounts().containsKey(2) ? cluster.getReplicationCounts().get(2).size() : 0);
             System.out.printf("# Data blocks with 1 copy: %,d%n", cluster.getReplicationCounts().containsKey(1) ? cluster.getReplicationCounts().get(1).size() : 0);
-            System.out.printf("# Data blocks with 0 copies: %,d%n", difference(variables.getDataBlockIds(), cluster.getDataBlockIdToNodeIds().keySet()).size());
+            System.out.printf("# Data blocks with 0 copies: %,d%n", difference(variables.getDataBlockIds(), cluster.getDataBlockIdToNodeIds(Executors.newSingleThreadExecutor()).keySet()).size());
 
             System.out.printf(
-                    "STOP: Current Time: %,d.  Tasks Running: %,d / %,d.  Tasks Completed: %,d / %,d.  Tasks Killed: %,d / %,d.  Failed Nodes: %,d%n",
+                    "STOP: Current Time: %,d (%,d).  Tasks Running: %,d / %,d (%,d / %,d).  Tasks Completed: %,d / %,d (%,d / %,d).  Tasks Killed: %,d / %,d.  Failed Nodes: %,d%n",
                     (long)currentTime,
+                    (long)timeElapsed,
                     runningMapReduceTasks.size(),
                     runningReplicateTasks.size(),
+                    size(filter(runningReplicateTasks, isReplicateTaskCritical())),
+                    size(filter(runningReplicateTasks, not(isReplicateTaskCritical()))),
                     numMRTasksCompleted.get(),
-                    numReplicateTasksCompleted.get(),
+                    numCriticalReplicateTasksCompleted.get() + numNonCriticalReplicateTasksCompleted.get(),
+                    numCriticalReplicateTasksCompleted.get(),
+                    numNonCriticalReplicateTasksCompleted.get(),
                     numMRTasksKilled.get(),
                     numReplicateTasksKilled.get(),
                     numFailedNodes);
@@ -273,11 +247,14 @@ public class Simulator implements Callable<Double> {
 
 
             status.setTime((long) currentTime);
+            status.setTimeStep((long)timeElapsed);
             status.setNumNodes(variables.getNodeIds().size());
             status.setNumFailedNodes(variables.getNodeIds().size() - cluster.getNodesById().size());
             status.setNumDataBlocks(variables.getDataBlockIds().size());
             status.setNumMRTasks(numMRTasksCompleted.get());
-            status.setNumReplicaTasks(numReplicateTasksCompleted.get());
+            status.setNumReplicaTasks(numCriticalReplicateTasksCompleted.get() + numNonCriticalReplicateTasksCompleted.get());
+            status.setNumCriticalReplicaTasks(numCriticalReplicateTasksCompleted.get());
+            status.setNumNonCriticalReplicTasks(numNonCriticalReplicateTasksCompleted.get());
             status.setReplicaCount(new HashMap<>(cluster.getDataBlockCount()));
             status.setNumMRTasksLeft(variables.getMapReduceJob().getTaskIds().size());
             status.setNumMRTasksKilled(numMRTasksKilled.get());

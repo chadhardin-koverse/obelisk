@@ -230,7 +230,7 @@ public class VariablesFactory implements Supplier<Variables>{
                     
                     if(canKillNode) {
                         killedNode = criticalNode;
-                        System.out.printf("Failing CRITICAL node %s%n", killedNode);
+//                        System.out.printf("Failing CRITICAL node %s%n", killedNode);
                         numCriticalNodesKilled++;
                         criticalNodesIterator.remove();
                         break;
@@ -244,7 +244,7 @@ public class VariablesFactory implements Supplier<Variables>{
                     while(uncriticalNodesIterator.hasNext()) {
                         final NodeId uncriticalNode = uncriticalNodesIterator.next();
                         killedNode = uncriticalNode;
-                        System.out.printf("Failing uncritical node %s%n", killedNode);
+//                        System.out.printf("Failing uncritical node %s%n", killedNode);
                         numUnCriticalNodesKilled++;
                         uncriticalNodesIterator.remove();
                         break;

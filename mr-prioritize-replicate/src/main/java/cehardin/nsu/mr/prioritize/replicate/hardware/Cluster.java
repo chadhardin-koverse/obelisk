@@ -7,7 +7,9 @@ package cehardin.nsu.mr.prioritize.replicate.hardware;
 import static com.google.common.collect.Sets.newHashSet;
 import static com.google.common.collect.Sets.filter;
 import static com.google.common.collect.Maps.newHashMap;
+import static com.google.common.collect.Maps.newConcurrentMap;
 import static com.google.common.collect.Maps.newTreeMap;
+import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Iterables.concat;
 import static com.google.common.collect.Iterables.find;
 import static com.google.common.collect.Iterables.transform;
@@ -25,17 +27,24 @@ import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -81,23 +90,43 @@ public class Cluster {
 
         return unmodifiableMap(blocksById);
     }
-    
-    public Map<DataBlockId, Set<NodeId>> getDataBlockIdToNodeIds() {
+
+    public Map<DataBlockId, Set<NodeId>> getDataBlockIdToNodeIds(ExecutorService executorService) {
+        final List<Future<Map<DataBlockId, Set<NodeId>>>> futures = newArrayList();
         final Map<DataBlockId, Set<NodeId>> dataBlocksToNodes = newHashMap();
-        
-        for(final Rack rack : racks) {
-            for(final Map.Entry<DataBlockId, Set<NodeId>> entry : rack.getDataBlockIdToNodeIds().entrySet()) {
-                final DataBlockId dataBlockId = entry.getKey();
-                final Set<NodeId> nodeIds = entry.getValue();
-                
-                if(!dataBlocksToNodes.containsKey(dataBlockId)) {
-                    dataBlocksToNodes.put(dataBlockId, new HashSet<NodeId>());
+
+        for (final Rack rack : racks) {
+            futures.add(executorService.submit(new Callable<Map<DataBlockId, Set<NodeId>>>() {
+                @Override
+                public Map<DataBlockId, Set<NodeId>> call() throws Exception {
+                    final Map<DataBlockId, Set<NodeId>> localDataBlocksToNodes = newHashMap();
+
+                    for (final Map.Entry<DataBlockId, Set<NodeId>> entry : rack.getDataBlockIdToNodeIds().entrySet()) {
+                        final DataBlockId dataBlockId = entry.getKey();
+                        final Set<NodeId> nodeIds = entry.getValue();
+
+                        if (!localDataBlocksToNodes.containsKey(dataBlockId)) {
+                            localDataBlocksToNodes.put(dataBlockId, new HashSet<NodeId>());
+                        }
+
+                        localDataBlocksToNodes.get(dataBlockId).addAll(nodeIds);
+                    }
+
+                    return localDataBlocksToNodes;
                 }
-                
-                dataBlocksToNodes.get(dataBlockId).addAll(nodeIds);
+            }));
+        }
+
+        for (final Future<Map<DataBlockId, Set<NodeId>>> future : futures) {
+            for (final Map.Entry<DataBlockId, Set<NodeId>> entry : Futures.getUnchecked(future).entrySet()) {
+                if (!dataBlocksToNodes.containsKey(entry.getKey())) {
+                    dataBlocksToNodes.put(entry.getKey(), new HashSet<NodeId>());
+                }
+
+                dataBlocksToNodes.get(entry.getKey()).addAll(entry.getValue());
             }
         }
-        
+
         return unmodifiableMap(dataBlocksToNodes);
     }
 
@@ -112,6 +141,50 @@ public class Cluster {
                 if (result.containsKey(dataBlockId)) {
                     final Integer currentCount = result.get(dataBlockId);
                     result.put(dataBlockId, currentCount + count);
+                } else {
+                    result.put(dataBlockId, count);
+                }
+            }
+        }
+
+        return unmodifiableMap(result);
+    }
+
+    public Map<DataBlockId, Integer> getDataBlockCount(ExecutorService executorService, final Predicate<? super DataBlockId> dataBlockIdPredicate) {
+        final Map<DataBlockId, Integer> result = newHashMap();
+        final List<Future<Map<DataBlockId, Integer>>> futures = newArrayList();
+
+        for (final Rack rack : getRacks()) {
+            futures.add(executorService.submit(new Callable<Map<DataBlockId, Integer>>() {
+                @Override
+                public Map<DataBlockId, Integer> call() throws Exception {
+                    final Map<DataBlockId, Integer> map = newHashMap();
+
+                    for (final Map.Entry<DataBlockId, Integer> entry : rack.getDataBlockCount(dataBlockIdPredicate).entrySet()) {
+                        final DataBlockId dataBlockId = entry.getKey();
+                        final Integer count = entry.getValue();
+
+                        if (map.containsKey(dataBlockId)) {
+                            map.put(dataBlockId, map.get(dataBlockId) + count);
+                        } else {
+                            map.put(dataBlockId, count);
+                        }
+                    }
+
+                    return map;
+                }
+            }));
+        }
+
+        for (final Future<Map<DataBlockId, Integer>> future : futures) {
+            final Map<DataBlockId, Integer> map = Futures.getUnchecked(future);
+
+            for (final Map.Entry<DataBlockId, Integer> entry : map.entrySet()) {
+                final DataBlockId dataBlockId = entry.getKey();
+                final int count = entry.getValue();
+
+                if (result.containsKey(dataBlockId)) {
+                    result.put(dataBlockId, result.get(dataBlockId) + count);
                 } else {
                     result.put(dataBlockId, count);
                 }
@@ -167,7 +240,6 @@ public class Cluster {
 //
 //        return randomRack;
 //    }
-
     public Rack findRackOfNode(final NodeId nodeId) {
         return find(getRacks(), rackContainsNode(nodeId));
     }
@@ -184,13 +256,13 @@ public class Cluster {
 
     public Set<Rack> findRacksOfDataBlock(final DataBlockId dataBlockId) {
         final Set<Rack> found = Sets.newCopyOnWriteArraySet();
-        
+
         for (final Rack rack : getRacks()) {
-            if(rack.hasDataBlock(dataBlockId)) {
+            if (rack.hasDataBlock(dataBlockId)) {
                 found.add(rack);
             }
         }
-        
+
         return unmodifiableSet(found);
     }
 

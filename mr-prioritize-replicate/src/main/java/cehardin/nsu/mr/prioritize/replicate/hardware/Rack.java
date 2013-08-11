@@ -25,6 +25,7 @@ import cehardin.nsu.mr.prioritize.replicate.id.NodeId;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -39,13 +40,16 @@ import java.util.logging.Logger;
  * @author Chad
  */
 public class Rack extends AbstractHardware<RackId> {
+
     private static class ExtractDataBlocksFromRack implements Function<Rack, Set<DataBlock>> {
+
         public Set<DataBlock> apply(Rack rack) {
             return rack.getDataBlocks();
         }
     }
-    
+
     private static class RackContainsNode implements Predicate<Rack> {
+
         private final NodeId nodeId;
 
         public RackContainsNode(NodeId nodeId) {
@@ -54,19 +58,17 @@ public class Rack extends AbstractHardware<RackId> {
 
         public boolean apply(Rack rack) {
             return rack.getNodesById().containsKey(nodeId);
-        }   
+        }
     }
-    
     private static final Function<Rack, Set<DataBlock>> ExtractDataBlocksFromRack = new ExtractDataBlocksFromRack();
-    
+
     public static Function<Rack, Set<DataBlock>> extractDataBlocksFromRack() {
         return ExtractDataBlocksFromRack;
     }
-    
+
     public static Predicate<Rack> rackContainsNode(final NodeId nodeId) {
         return new RackContainsNode(nodeId);
     }
-    
     private final Logger logger = Logger.getLogger(getClass().getSimpleName());
     private final Set<Node> nodes;
     private final Resource networkResource;
@@ -92,25 +94,25 @@ public class Rack extends AbstractHardware<RackId> {
     public Set<DataBlock> getDataBlocks() {
         return newHashSet(concat(transform(getNodes(), extractDataBlocksFromNode())));
     }
-    
+
     public Set<DataBlockId> getDataBlockIds() {
         final Set<DataBlockId> dataBlockIds = newHashSet();
-        
-        for(final Node node : getNodes()) {
+
+        for (final Node node : getNodes()) {
             Iterables.addAll(dataBlockIds, node.getDataBlockIds());
         }
-        
+
         return unmodifiableSet(dataBlockIds);
     }
-    
+
     public boolean hasDataBlock(final DataBlockId dataBlockId) {
         return any(
                 transform(
-                    concat(
-                        transform(
-                            getNodes(), 
-                            extractDataBlocksFromNode())),
-                    extractIdFromDataBlock()),
+                concat(
+                transform(
+                getNodes(),
+                extractDataBlocksFromNode())),
+                extractIdFromDataBlock()),
                 equalTo(dataBlockId));
     }
 
@@ -132,36 +134,41 @@ public class Rack extends AbstractHardware<RackId> {
 
         return unmodifiableMap(blocksById);
     }
-    
+
     public Map<DataBlockId, Set<NodeId>> getDataBlockIdToNodeIds() {
         final Map<DataBlockId, Set<NodeId>> dataBlocksToNodes = newHashMap();
-        
-        for(final Node node : nodes) {
+
+        for (final Node node : nodes) {
             final NodeId nodeId = node.getId();
-            for(final DataBlock dataBlock : node.getDataBlocks()) {
+            for (final DataBlock dataBlock : node.getDataBlocks()) {
                 final DataBlockId dataBlockId = dataBlock.getId();
-                if(!dataBlocksToNodes.containsKey(dataBlockId)) {
+                if (!dataBlocksToNodes.containsKey(dataBlockId)) {
                     dataBlocksToNodes.put(dataBlockId, new HashSet<NodeId>());
                 }
-                
+
                 dataBlocksToNodes.get(dataBlockId).add(nodeId);
             }
         }
-        
+
         return unmodifiableMap(dataBlocksToNodes);
     }
 
     public Map<DataBlockId, Integer> getDataBlockCount() {
+        return getDataBlockCount(Predicates.alwaysTrue());
+    }
+    
+    public Map<DataBlockId, Integer> getDataBlockCount(Predicate<? super DataBlockId> dataBlockIdPredicate) {
         final Map<DataBlockId, Integer> result = newHashMap();
 
         for (final Node node : getNodes()) {
             for (final DataBlock dataBlock : node.getDataBlocks()) {
                 final DataBlockId dataBlockId = dataBlock.getId();
-
-                if (result.containsKey(dataBlockId)) {
-                    result.put(dataBlockId, result.get(dataBlockId) + 1);
-                } else {
-                    result.put(dataBlockId, 1);
+                if (dataBlockIdPredicate.apply(dataBlockId)) {
+                    if (result.containsKey(dataBlockId)) {
+                        result.put(dataBlockId, result.get(dataBlockId) + 1);
+                    } else {
+                        result.put(dataBlockId, 1);
+                    }
                 }
             }
         }
@@ -207,7 +214,6 @@ public class Rack extends AbstractHardware<RackId> {
 //        return randomNode;
 //
 //    }
-
     public Set<Node> findNodesOfDataBlockId(final DataBlockId dataBlockId) {
         return unmodifiableSet(filter(getNodes(), nodeContainsDataBlock(dataBlockId)));
     }
