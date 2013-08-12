@@ -6,8 +6,11 @@ package cehardin.nsu.mr.prioritize.replicate.event;
 
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import com.google.common.collect.Maps;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  *
@@ -75,6 +78,21 @@ public class Status {
 
     public void setReplicaCount(Map<DataBlockId, Integer> replicaCount) {
         this.replicaCount = replicaCount;
+    }
+    
+    public SortedMap<Integer, Integer> getSummarizedReplicaCount() {
+        final SortedMap<Integer, Integer> map = new TreeMap<>();
+        
+        for(final Integer count : getReplicaCount().values()) {
+            if(map.containsKey(count)) {
+                map.put(count, map.get(count) + 1);
+            }
+            else {
+                map.put(count, 1);
+            }
+        }
+        
+        return Collections.unmodifiableSortedMap(map);
     }
 
     public int getNumMRTasks() {

@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.Writer;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -77,6 +78,7 @@ public class App implements Runnable {
     private Map<DataBlockId, Double> createTemperatureMap(Variables variables) {
         final Variables.MapReduceJob mapReduceJob = variables.getMapReduceJob();
         final Map<DataBlockId, Double> temperatureMap = new HashMap<>();
+        final Set<NodeId> hotNodes = new HashSet<>();
         
         for(final NodeId nodeId : variables.getNodeIds()) {
             for(final DataBlockId dataBlockId : variables.getNodeIdToDataBlockIds().apply(nodeId)) {
@@ -87,6 +89,13 @@ public class App implements Runnable {
         for(final TaskId taskId : mapReduceJob.getTaskIds()) {
             final DataBlockId dataBlockId = mapReduceJob.getTaskIdToDataBlockId().apply(taskId);
             temperatureMap.put(dataBlockId, temperatureMap.get(dataBlockId) + 1);
+            hotNodes.addAll(variables.getDataBlockIdToNodeIds().apply(dataBlockId));
+        }
+        
+        for(final NodeId hotNode : hotNodes) {
+            for(final DataBlockId dataBlockId : variables.getNodeIdToDataBlockIds().apply(hotNode)) {
+                temperatureMap.put(dataBlockId, temperatureMap.get(dataBlockId) + 1);
+            }            
         }
         
         return temperatureMap;

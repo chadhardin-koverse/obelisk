@@ -2,6 +2,7 @@ package cehardin.nsu.mr.prioritize.replicate;
 
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -18,7 +19,7 @@ public class StandardReplicateTaskScheduler extends AbstractReplicateTaskSchedul
 
     @Override
     protected void sort(List<ReplicateTask> tasks) {
-        //do nothing
+        Collections.shuffle(tasks);
     }
 
 }

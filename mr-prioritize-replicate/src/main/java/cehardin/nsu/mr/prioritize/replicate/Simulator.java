@@ -209,8 +209,11 @@ public class Simulator implements Callable<Double> {
                     if(currentTime < mapReduceJob.getStartTime()) {
                         availableStepTime = mapReduceJob.getStartTime() - currentTime;
                     }
-                    else {
+                    else if(runningMapReduceTasks.isEmpty()) {
                         availableStepTime = mapReduceTimeStep * 10;
+                    }
+                    else {
+                        availableStepTime = mapReduceTimeStep;
                     }
                 }
                 

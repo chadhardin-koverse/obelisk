@@ -3,7 +3,7 @@ package cehardin.nsu.mr.prioritize.replicate;
 import static com.google.common.collect.Maps.newHashMap;
 import static com.google.common.collect.Maps.newTreeMap;
 import static cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask.isReplicateTaskCritical;
-
+import static java.util.Collections.reverseOrder;
 import cehardin.nsu.mr.prioritize.replicate.id.DataBlockId;
 import cehardin.nsu.mr.prioritize.replicate.task.ReplicateTask;
 import java.util.Collections;
@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -84,12 +85,12 @@ public class HotDataBlockReplicateTaskScheduler extends AbstractReplicateTaskSch
             }
         }
         
-        System.out.println(String.format("Temperature Count: %s", temperatureCount));
+        System.out.println(String.format("Temperature Count: %s", new TreeMap<>(temperatureCount)));
         
     }
 
     @Override
     protected void sort(List<ReplicateTask> tasks) {
-        Collections.sort(tasks, comparator);
+        Collections.sort(tasks, reverseOrder(comparator));
     }
 }
