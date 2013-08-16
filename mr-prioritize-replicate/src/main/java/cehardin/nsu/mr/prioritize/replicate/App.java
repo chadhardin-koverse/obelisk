@@ -104,7 +104,6 @@ public class App implements Runnable {
     }
     
     public static void main(String[] args) {
-        final Random random = new Random(0);
         final Bandwidth diskBadwidth;
         final Bandwidth rackBandwidth;
         final Bandwidth clusterBandwidth;
@@ -117,7 +116,7 @@ public class App implements Runnable {
         final int numRacks;
         final int numDataBlocks;
         final int numTasks;
-        final Variables variables;
+        
         
         diskBadwidth = new Bandwidth(100_000_000L, 1, TimeUnit.SECONDS);
         rackBandwidth = new Bandwidth(1_000_000_000L / 8, 1, TimeUnit.SECONDS);
@@ -132,7 +131,15 @@ public class App implements Runnable {
         mapReduceStartTime = TimeUnit.SECONDS.toMillis(60);
         numTasks = numNodes / 2;
         
-        VariablesFactory variablesFactory = new VariablesFactory(
+        
+        
+        
+        
+        
+        for(int runNumber=1; runNumber <= 10; runNumber++) {
+            final Random random = new Random(runNumber);
+            final Variables variables;
+            final VariablesFactory variablesFactory = new VariablesFactory(
                 random, 
                 diskBadwidth, 
                 rackBandwidth, 
@@ -146,12 +153,16 @@ public class App implements Runnable {
                 nodePercentageFailed, 
                 mapReduceStartTime,
                 numTasks);
+            final App app;
         
-        System.out.printf("Creating variables...%n");
-        variables = variablesFactory.get();
-        System.out.printf("Created variables%n");
-        App app = new App(variables, random);
-        app.run();
+            System.out.printf("Run # %,d : Creating variables...%n", runNumber);
+            variables = variablesFactory.get();
+            System.out.printf("Run # %,d : Created variables%n", runNumber);
+            
+            app = new App(variables, random);
+            app.run();
+        }
+        
         
     }
 }

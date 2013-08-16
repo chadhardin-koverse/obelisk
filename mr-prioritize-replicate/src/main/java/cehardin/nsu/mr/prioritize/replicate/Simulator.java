@@ -197,24 +197,11 @@ public class Simulator implements Callable<Double> {
                 final double availableStepTime;
                 double time = 0;
                 
-                if(mapReduceJob.getTaskIds().isEmpty()) {
-                    if(runningMapReduceTasks.isEmpty()) {
-                        availableStepTime = replicaTimeStep;
-                    }
-                    else {
-                        availableStepTime = mapReduceTimeStep;
-                    }
+                if(mapReduceJob.getTaskIds().isEmpty() && runningMapReduceTasks.isEmpty()) {
+                    availableStepTime = replicaTimeStep;
                 }
                 else {
-                    if(currentTime < mapReduceJob.getStartTime()) {
-                        availableStepTime = mapReduceJob.getStartTime() - currentTime;
-                    }
-                    else if(runningMapReduceTasks.isEmpty()) {
-                        availableStepTime = mapReduceTimeStep * 10;
-                    }
-                    else {
-                        availableStepTime = mapReduceTimeStep;
-                    }
+                    availableStepTime = mapReduceTimeStep;
                 }
                 
                 for (final Resource resource : resources) {
